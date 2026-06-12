@@ -1,51 +1,49 @@
+export const runtime = 'edge'
+
 const DAILY_LIMIT = 5
 
-async function getCount(ip) {
+async function getCount(ip, url, token) {
   const key = `rl:${ip}:${new Date().toISOString().slice(0, 10)}`
-  const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${key}`
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
+  const res = await fetch(`${url}/get/${key}`, {
+    headers: { Authorization: `Bearer ${token}` },
   })
   const data = await res.json()
   return parseInt(data.result || '0', 10)
 }
 
-async function incrementCount(ip) {
+async function incrementCount(ip, url, token) {
   const key = `rl:${ip}:${new Date().toISOString().slice(0, 10)}`
-  const url = `${process.env.UPSTASH_REDIS_REST_URL}/pipeline`
-  const res = await fetch(url, {
+  const res = await fetch(`${url}/pipeline`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify([
-      ['INCR', key],
-      ['EXPIRE', key, 86400],
-    ]),
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify([['INCR', key], ['EXPIRE', key, 86400]]),
   })
   const data = await res.json()
   return data[0].result
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end()
+export default async function handler(req) {
+  if (req.method !== 'POST') return new Response(null, { status: 405 })
 
   const apiKey = process.env.DEEPSEEK_API_KEY
-  if (!apiKey) return res.status(500).json({ error: '服务配置错误' })
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
 
-  const ip = (req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown').trim()
+  if (!apiKey) return new Response(JSON.stringify({ error: '服务配置错误' }), { status: 500 })
 
-  const used = await getCount(ip)
+  const ip = (req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown').trim()
+
+  const used = await getCount(ip, redisUrl, redisToken)
   if (used >= DAILY_LIMIT) {
-    return res.status(429).json({
+    return new Response(JSON.stringify({
       error: `你今天已使用 ${DAILY_LIMIT} 次，明天再来吧 🌙`,
       remaining: 0,
-    })
+    }), { status: 429, headers: { 'Content-Type': 'application/json' } })
   }
 
-  const { text } = req.body
-  if (!text) return res.status(400).json({ error: '请输入内容' })
+  const body = await req.json()
+  const { text } = body
+  if (!text) return new Response(JSON.stringify({ error: '请输入内容' }), { status: 400 })
 
   const systemPrompt = `你是一位温柔而敏锐的心理分析师，擅长帮助人识别话语中的投射、真实感受、情绪和内在需要。
 用户会输入一段文字，你需要分析并以JSON格式返回，不要返回任何其他内容，不要有markdown代码块。
@@ -90,18 +88,23 @@ items至少3条，最多6条。语言简体中文，温暖、不评判。`
 
     const data = await response.json()
     if (!response.ok) {
-      return res.status(response.status).json({ error: data?.error?.message || '请求失败' })
+      return new Response(JSON.stringify({ error: data?.error?.message || '请求失败' }), {
+        status: response.status, headers: { 'Content-Type': 'application/json' }
+      })
     }
 
     const raw = data?.choices?.[0]?.message?.content || ''
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
-
-    const newCount = await incrementCount(ip)
+    const newCount = await incrementCount(ip, redisUrl, redisToken)
     const remaining = DAILY_LIMIT - newCount
 
-    return res.status(200).json({ ...parsed, remaining })
+    return new Response(JSON.stringify({ ...parsed, remaining }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    })
   } catch (e) {
-    return res.status(500).json({ error: '分析时出现错误，请稍后重试' })
+    return new Response(JSON.stringify({ error: '分析时出现错误，请稍后重试' }), {
+      status: 500, headers: { 'Content-Type': 'application/json' }
+    })
   }
 }
