@@ -717,7 +717,7 @@ export default function Home() {
           display: flex;
           align-items: center;
           gap: 16px;
-          margin: 4px 0 28px;
+          margin: 0 0 24px;
           color: #684728;
           font-size: 18px;
           font-weight: 650;
@@ -733,24 +733,25 @@ export default function Home() {
         .quote-card {
           position: relative;
           display: flex;
-          gap: 22px;
+          gap: 20px;
           align-items: flex-start;
-          padding: 28px 34px;
+          min-height: 112px;
+          padding: 22px 28px;
           border: 1px solid rgba(132,96,59,0.16);
           border-radius: 16px;
           background: rgba(255,255,255,0.72);
           box-shadow: 0 18px 48px rgba(68,47,28,0.06);
         }
         .quote-mark {
-          width: 54px;
-          height: 54px;
+          width: 48px;
+          height: 48px;
           display: grid;
           place-items: center;
           border: 1px solid #eadfce;
           border-radius: 50%;
           color: #a57948;
           font-family: Georgia, serif;
-          font-size: 48px;
+          font-size: 42px;
           line-height: 1;
           flex: 0 0 auto;
         }
@@ -758,8 +759,8 @@ export default function Home() {
           margin: 0;
           max-width: 720px;
           color: #2e2924;
-          font-size: 20px;
-          line-height: 1.65;
+          font-size: 18px;
+          line-height: 1.58;
           font-weight: 650;
         }
         .quote-card time {
@@ -769,20 +770,20 @@ export default function Home() {
           white-space: nowrap;
         }
         .report-title {
-          margin: 34px 0 26px 10px;
-          font-size: clamp(36px, 3.6vw, 50px);
-          line-height: 1.25;
+          margin: 30px 0 22px 10px;
+          font-size: clamp(34px, 3vw, 44px);
+          line-height: 1.22;
         }
         .report-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 18px;
+          gap: 16px;
         }
         .report-card {
           position: relative;
           min-width: 0;
-          min-height: 240px;
-          padding: 28px 30px;
+          min-height: 206px;
+          padding: 22px 24px;
           border: 1px solid rgba(132,96,59,0.15);
           border-radius: 16px;
           background: rgba(255,255,255,0.68);
@@ -792,11 +793,11 @@ export default function Home() {
         .report-card h2 {
           position: relative;
           z-index: 1;
-          margin: 24px 0 18px;
+          margin: 18px 0 14px;
           color: #2c251f;
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: clamp(30px, 2.25vw, 38px);
-          line-height: 1.22;
+          font-size: clamp(28px, 2vw, 34px);
+          line-height: 1.18;
           letter-spacing: 0;
           overflow-wrap: anywhere;
         }
@@ -806,17 +807,26 @@ export default function Home() {
           z-index: 1;
           margin: 0;
           color: #4d443b;
-          font-size: 16px;
-          line-height: 1.82;
+          font-size: 15px;
+          line-height: 1.72;
           overflow-wrap: anywhere;
+        }
+        .theme-card p,
+        .focus-card p,
+        .need-card p,
+        .blind-card p {
+          display: -webkit-box;
+          -webkit-line-clamp: 5;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         .focus-card blockquote {
           color: #4d3eb0;
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: clamp(21px, 1.45vw, 25px);
+          font-size: clamp(19px, 1.3vw, 22px);
           font-weight: 800;
-          line-height: 1.55;
-          margin: 24px 0 18px;
+          line-height: 1.46;
+          margin: 18px 0 14px;
           letter-spacing: 0;
           overflow-wrap: anywhere;
         }
@@ -827,19 +837,19 @@ export default function Home() {
           align-items: center;
           gap: 10px;
           color: #8d5a23;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 700;
         }
         .card-label i {
-          width: 40px;
-          height: 40px;
+          width: 34px;
+          height: 34px;
           display: grid;
           place-items: center;
           border-radius: 50%;
           background: #fff2de;
           color: #f09a2a;
           font-style: normal;
-          font-size: 20px;
+          font-size: 18px;
         }
         .tone-violet .card-label { color: #4d3eb0; }
         .tone-violet .card-label i { background: #efedff; color: #7565dd; }
@@ -848,22 +858,22 @@ export default function Home() {
         .tone-amber .card-label { color: #bf6b25; }
         .insight-card {
           grid-column: span 2;
-          min-height: 220px;
+          min-height: 176px;
           background: linear-gradient(135deg, rgba(255,248,238,0.88), rgba(255,255,255,0.72));
         }
         .insight-card h2 {
-          max-width: 720px;
-          font-size: clamp(26px, 2vw, 32px);
-          line-height: 1.48;
+          max-width: 700px;
+          font-size: clamp(24px, 1.7vw, 29px);
+          line-height: 1.42;
         }
         .suggestion-card {
           grid-column: 1 / -1;
-          min-height: 180px;
-          padding-right: 310px;
+          min-height: 150px;
+          padding-right: 300px;
         }
         .suggestion-card p {
           max-width: 640px;
-          padding-left: 30px;
+          padding-left: 24px;
         }
         .mountain,
         .wide-mountain,
@@ -930,8 +940,9 @@ export default function Home() {
           .main { padding: 24px; }
           .report-grid { grid-template-columns: 1fr 1fr; }
           .need-card, .suggestion-card { grid-column: 1 / -1; }
-          .report-card h2 { font-size: 32px; }
-          .insight-card h2 { font-size: 28px; }
+          .quote-card { padding: 20px 24px; }
+          .report-card h2 { font-size: 30px; }
+          .insight-card h2 { font-size: 26px; }
           .suggestion-card { padding-right: 240px; }
         }
 
@@ -1024,7 +1035,8 @@ export default function Home() {
           }
           .quote-card {
             display: block;
-            padding: 22px 20px;
+            min-height: 0;
+            padding: 20px 18px;
           }
           .quote-mark {
             width: 42px;
@@ -1032,7 +1044,7 @@ export default function Home() {
             margin-bottom: 12px;
             font-size: 38px;
           }
-          .quote-card p { font-size: 17px; }
+          .quote-card p { font-size: 16px; }
           .quote-card time {
             display: block;
             margin-top: 12px;
@@ -1042,16 +1054,16 @@ export default function Home() {
           .insight-card, .suggestion-card { grid-column: auto; }
           .report-card {
             min-height: auto;
-            padding: 22px;
+            padding: 20px;
           }
           .report-card h2 {
-            font-size: 30px;
+            font-size: 28px;
           }
           .focus-card blockquote {
-            font-size: 20px;
+            font-size: 19px;
           }
           .insight-card h2 {
-            font-size: 24px;
+            font-size: 22px;
           }
           .suggestion-card {
             padding-right: 22px;
