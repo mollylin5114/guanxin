@@ -1,30 +1,4 @@
-const DAILY_LIMIT = 5
-
-function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for']
-  const value = Array.isArray(forwarded) ? forwarded[0] : forwarded
-  return (value?.split(',')[0] || req.socket?.remoteAddress || 'unknown').trim()
-}
-
-async function getCount(ip, url, token) {
-  const key = `rl:${ip}:${new Date().toISOString().slice(0, 10)}`
-  const res = await fetch(`${url}/get/${key}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  const data = await res.json()
-  return parseInt(data.result || '0', 10)
-}
-
-async function incrementCount(ip, url, token) {
-  const key = `rl:${ip}:${new Date().toISOString().slice(0, 10)}`
-  const res = await fetch(`${url}/pipeline`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify([['INCR', key], ['EXPIRE', key, 86400]]),
-  })
-  const data = await res.json()
-  return data[0].result
-}
+import { DAILY_LIMIT, getClientIp, getClientTimeZone, getCount, incrementCount } from '../../lib/rateLimit'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -36,8 +10,9 @@ export default async function handler(req, res) {
   if (!apiKey || !redisUrl || !redisToken) return res.status(500).json({ error: '服务配置错误' })
 
   const ip = getClientIp(req)
+  const timeZone = getClientTimeZone(req)
 
-  const used = await getCount(ip, redisUrl, redisToken)
+  const used = await getCount(ip, timeZone, redisUrl, redisToken)
   if (used >= DAILY_LIMIT) {
     return res.status(429).json({
       error: `你今天已使用 ${DAILY_LIMIT} 次，明天再来吧 🌙`,
@@ -123,7 +98,7 @@ perspectives说明：
     const raw = data?.choices?.[0]?.message?.content || ''
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
-    const newCount = await incrementCount(ip, redisUrl, redisToken)
+    const newCount = await incrementCount(ip, timeZone, redisUrl, redisToken)
     const remaining = DAILY_LIMIT - newCount
 
     return res.status(200).json({ ...parsed, remaining })

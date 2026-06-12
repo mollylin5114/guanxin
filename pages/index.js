@@ -94,6 +94,14 @@ function getPerspectives(result) {
   })
 }
 
+function getBrowserTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai'
+  } catch {
+    return 'Asia/Shanghai'
+  }
+}
+
 export default function Home() {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -124,7 +132,10 @@ export default function Home() {
     setSidebarOpen(!mq.matches)
     mq.addEventListener('change', handleMq)
 
-    fetch('/api/remaining')
+    const timezone = getBrowserTimeZone()
+    fetch(`/api/remaining?tz=${encodeURIComponent(timezone)}`, {
+      headers: { 'x-guanxin-timezone': timezone },
+    })
       .then(r => r.json())
       .then(d => { if (d.remaining !== undefined) setRemaining(d.remaining) })
       .catch(() => {})
@@ -172,8 +183,11 @@ export default function Home() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim() }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-guanxin-timezone': getBrowserTimeZone(),
+        },
+        body: JSON.stringify({ text: text.trim(), timezone: getBrowserTimeZone() }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '分析失败')
