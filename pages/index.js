@@ -47,6 +47,13 @@ function findItem(result, type, fallbackIndex = 0) {
   return result?.items?.find(item => item.type === type) || result?.items?.[fallbackIndex] || null
 }
 
+function compactTitle(item, fallback) {
+  const raw = item?.quote?.replace(/[“”"「」]/g, '').trim()
+  if (!raw) return fallback
+  if (raw.length <= 8) return raw
+  return fallback
+}
+
 export default function Home() {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -306,7 +313,7 @@ export default function Home() {
               <div className="report-grid">
                 <article className="report-card theme-card">
                   <CardLabel item={themeItem} fallback="核心主题" />
-                  <h2>{themeItem?.quote || '正在寻找认可'}</h2>
+                  <h2>{compactTitle(themeItem, '认可')}</h2>
                   <p>{themeItem?.explain || result.summary}</p>
                   <div className="mountain warm" />
                 </article>
@@ -320,7 +327,7 @@ export default function Home() {
 
                 <article className="report-card need-card">
                   <CardLabel item={needItem} fallback="你此刻的需要" />
-                  <h2>{needItem?.quote || '确定感'}</h2>
+                  <h2>{compactTitle(needItem, '确定感')}</h2>
                   <p>{needItem?.explain || result.summary}</p>
                   <div className="mountain green" />
                 </article>
@@ -768,13 +775,14 @@ export default function Home() {
         }
         .report-grid {
           display: grid;
-          grid-template-columns: 1.05fr 1fr 1fr;
-          gap: 16px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
         }
         .report-card {
           position: relative;
-          min-height: 220px;
-          padding: 28px;
+          min-width: 0;
+          min-height: 240px;
+          padding: 28px 30px;
           border: 1px solid rgba(132,96,59,0.15);
           border-radius: 16px;
           background: rgba(255,255,255,0.68);
@@ -784,11 +792,13 @@ export default function Home() {
         .report-card h2 {
           position: relative;
           z-index: 1;
-          margin: 24px 0 16px;
+          margin: 24px 0 18px;
           color: #2c251f;
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: 42px;
-          line-height: 1.2;
+          font-size: clamp(30px, 2.25vw, 38px);
+          line-height: 1.22;
+          letter-spacing: 0;
+          overflow-wrap: anywhere;
         }
         .report-card p,
         .report-card blockquote {
@@ -797,15 +807,18 @@ export default function Home() {
           margin: 0;
           color: #4d443b;
           font-size: 16px;
-          line-height: 1.9;
+          line-height: 1.82;
+          overflow-wrap: anywhere;
         }
         .focus-card blockquote {
           color: #4d3eb0;
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: 24px;
+          font-size: clamp(21px, 1.45vw, 25px);
           font-weight: 800;
           line-height: 1.55;
           margin: 24px 0 18px;
+          letter-spacing: 0;
+          overflow-wrap: anywhere;
         }
         .card-label {
           position: relative;
@@ -839,9 +852,9 @@ export default function Home() {
           background: linear-gradient(135deg, rgba(255,248,238,0.88), rgba(255,255,255,0.72));
         }
         .insight-card h2 {
-          max-width: 650px;
-          font-size: 34px;
-          line-height: 1.55;
+          max-width: 720px;
+          font-size: clamp(26px, 2vw, 32px);
+          line-height: 1.48;
         }
         .suggestion-card {
           grid-column: 1 / -1;
@@ -917,6 +930,8 @@ export default function Home() {
           .main { padding: 24px; }
           .report-grid { grid-template-columns: 1fr 1fr; }
           .need-card, .suggestion-card { grid-column: 1 / -1; }
+          .report-card h2 { font-size: 32px; }
+          .insight-card h2 { font-size: 28px; }
           .suggestion-card { padding-right: 240px; }
         }
 
@@ -1030,13 +1045,13 @@ export default function Home() {
             padding: 22px;
           }
           .report-card h2 {
-            font-size: 34px;
+            font-size: 30px;
           }
           .focus-card blockquote {
-            font-size: 21px;
+            font-size: 20px;
           }
           .insight-card h2 {
-            font-size: 26px;
+            font-size: 24px;
           }
           .suggestion-card {
             padding-right: 22px;
