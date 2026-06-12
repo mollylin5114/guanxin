@@ -15,8 +15,8 @@ function KeySetup({ onSave }) {
 
   async function handleSave() {
     const trimmed = key.trim()
-    if (!trimmed.startsWith('AIza')) {
-      setError('Key 格式不对，应以 AIza 开头')
+    if (!trimmed.startsWith('sk-')) {
+      setError('Key 格式不对，应以 sk- 开头')
       return
     }
     setTesting(true)
@@ -60,7 +60,7 @@ function KeySetup({ onSave }) {
               value={key}
               onChange={e => setKey(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSave()}
-              placeholder="AIzaSy..."
+              placeholder="sk-..."
               style={{
                 width: '100%', padding: '10px 14px', fontSize: 14,
                 border: '1px solid var(--border-md)', borderRadius: 'var(--radius-sm)',
@@ -90,11 +90,11 @@ function KeySetup({ onSave }) {
 
           <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: '1rem', lineHeight: 1.7 }}>
             还没有 API Key？前往{' '}
-            <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer"
+            <a href="https://platform.deepseek.com" target="_blank" rel="noopener noreferrer"
               style={{ color: 'var(--purple-600)', textDecoration: 'underline' }}>
-              aistudio.google.com
+              platform.deepseek.com
             </a>{' '}
-            免费申请，每天 1500 次请求。
+            免费注册申请。
           </p>
         </div>
       </div>
