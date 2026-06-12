@@ -29,7 +29,7 @@ export default function Home() {
   const [remaining, setRemaining] = useState(null)
   const [history, setHistory] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(true)
   const [activeId, setActiveId] = useState(null)
   const resultRef = useRef(null)
 
