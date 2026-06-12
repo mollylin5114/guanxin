@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   const { text, apiKey } = req.body
   if (!text || !apiKey) return res.status(400).json({ error: '缺少必要参数' })
 
-  const prompt = `你是一位温柔而敏锐的心理分析师，擅长帮助人识别话语中的投射、真实感受、情绪和内在需要。
+  const systemPrompt = `你是一位温柔而敏锐的心理分析师，擅长帮助人识别话语中的投射、真实感受、情绪和内在需要。
 用户会输入一段文字，你需要分析并以JSON格式返回，不要返回任何其他内容，不要有markdown代码块。
 
 JSON格式如下：
@@ -26,34 +26,36 @@ type说明：
 - emotion: 情绪（明显的情绪状态）
 - need: 内在需要（话语背后未被满足的需要）
 
-items至少3条，最多6条。语言简体中文，温暖、不评判。
-
-用户输入：${text}`
+items至少3条，最多6条。语言简体中文，温暖、不评判。`
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1200, temperature: 0.7 },
-        }),
-      }
-    )
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 1200,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text },
+        ],
+      }),
+    })
 
     const data = await response.json()
 
     if (!response.ok) {
       const msg = data?.error?.message || '请求失败'
-      if (response.status === 400 && msg.includes('API_KEY')) {
+      if (response.status === 401) {
         return res.status(401).json({ error: 'API Key 无效，请检查后重试' })
       }
       return res.status(response.status).json({ error: msg })
     }
 
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const raw = data?.choices?.[0]?.message?.content || ''
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
     return res.status(200).json(parsed)
