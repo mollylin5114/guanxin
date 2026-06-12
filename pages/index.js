@@ -220,7 +220,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>观心 · 看见自己真正在说什么</title>
+        <title>观心 · 照见自己</title>
         <meta name="description" content="用 AI 帮你分辨话语中的投射、真实感受与内在需要" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -231,7 +231,7 @@ export default function Home() {
         <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
           <div className="brand-panel">
             <button className="brand-mark" onClick={newAnalysis}>观心</button>
-            <p>看见自己真正正在说什么</p>
+            <p>照见自己</p>
           </div>
 
           <nav className="nav-list">
@@ -393,8 +393,10 @@ export default function Home() {
                 <div className="perspective-list">
                   {perspectives.map(item => (
                     <article className="perspective-card" key={item.avatar}>
-                      <img className="avatar" src={`/images/perspectives/${item.avatar}.png`} alt={`${item.name}头像`} />
-                      <h3>如果是{item.name}</h3>
+                      <div className="perspective-person">
+                        <img className="avatar" src={`/images/perspectives/${item.avatar}.png`} alt={`${item.name}头像`} />
+                        <h3>{item.name}</h3>
+                      </div>
                       <p>{item.content}</p>
                     </article>
                   ))}
@@ -467,7 +469,7 @@ export default function Home() {
           color: #2c241f;
           font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
           font-size: 32px;
-          font-weight: 800;
+          font-weight: 700;
           letter-spacing: 0.03em;
         }
         .brand-panel p {
@@ -644,7 +646,7 @@ export default function Home() {
           font-size: clamp(38px, 3.7vw, 54px);
           line-height: 1.45;
           letter-spacing: 0.02em;
-          font-weight: 800;
+          font-weight: 700;
         }
         .hero-copy p {
           margin: 20px 0 0;
@@ -770,8 +772,8 @@ export default function Home() {
           gap: 16px;
           margin: 0 0 24px;
           color: #684728;
-          font-size: 18px;
-          font-weight: 650;
+          font-size: 17px;
+          font-weight: 600;
         }
         .report-head button {
           width: 34px;
@@ -786,23 +788,23 @@ export default function Home() {
           display: flex;
           gap: 20px;
           align-items: flex-start;
-          min-height: 96px;
-          padding: 18px 26px;
+          min-height: 92px;
+          padding: 18px 24px;
           border: 1px solid rgba(132,96,59,0.16);
           border-radius: 16px;
           background: rgba(255,255,255,0.72);
           box-shadow: 0 18px 48px rgba(68,47,28,0.06);
         }
         .quote-mark {
-          width: 42px;
-          height: 42px;
+          width: 38px;
+          height: 38px;
           display: grid;
           place-items: center;
           border: 1px solid #eadfce;
           border-radius: 50%;
           color: #a57948;
           font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
-          font-size: 36px;
+          font-size: 30px;
           line-height: 1;
           flex: 0 0 auto;
         }
@@ -810,20 +812,21 @@ export default function Home() {
           margin: 0;
           max-width: 720px;
           color: #2e2924;
-          font-size: 17px;
-          line-height: 1.5;
-          font-weight: 650;
+          font-size: 15px;
+          line-height: 1.65;
+          font-weight: 500;
         }
         .quote-card time {
           margin-left: auto;
           color: #9a8c7d;
-          font-size: 14px;
+          font-size: 13px;
           white-space: nowrap;
         }
         .report-title {
-          margin: 24px 0 20px 10px;
-          font-size: clamp(28px, 2.25vw, 36px);
-          line-height: 1.18;
+          margin: 24px 0 18px 4px;
+          font-size: clamp(26px, 1.9vw, 32px);
+          line-height: 1.32;
+          font-weight: 600;
         }
         .report-grid {
           display: grid;
@@ -833,9 +836,9 @@ export default function Home() {
         .report-card {
           position: relative;
           min-width: 0;
-          height: 210px;
+          height: 214px;
           min-height: 0;
-          padding: 18px 20px;
+          padding: 18px 20px 20px;
           border: 1px solid rgba(132,96,59,0.15);
           border-radius: 16px;
           background: rgba(255,255,255,0.68);
@@ -845,12 +848,13 @@ export default function Home() {
         .report-card h2 {
           position: relative;
           z-index: 1;
-          margin: 16px 0 12px;
+          margin: 14px 0 10px;
           color: #2c251f;
           font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
-          font-size: clamp(22px, 1.55vw, 27px);
-          line-height: 1.15;
+          font-size: clamp(19px, 1.28vw, 23px);
+          line-height: 1.32;
           letter-spacing: 0;
+          font-weight: 600;
           overflow-wrap: anywhere;
         }
         .report-card p,
@@ -860,7 +864,7 @@ export default function Home() {
           margin: 0;
           color: #4d443b;
           font-size: 13px;
-          line-height: 1.55;
+          line-height: 1.72;
           overflow-wrap: anywhere;
         }
         .theme-card p,
@@ -868,17 +872,17 @@ export default function Home() {
         .need-card p,
         .blind-card p {
           display: -webkit-box;
-          -webkit-line-clamp: 4;
+          -webkit-line-clamp: 5;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
         .focus-card blockquote {
           color: #4d3eb0;
           font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
-          font-size: clamp(16px, 1.05vw, 18px);
-          font-weight: 800;
-          line-height: 1.4;
-          margin: 16px 0 12px;
+          font-size: clamp(14px, 0.94vw, 16px);
+          font-weight: 600;
+          line-height: 1.6;
+          margin: 14px 0 10px;
           letter-spacing: 0;
           overflow-wrap: anywhere;
         }
@@ -889,19 +893,19 @@ export default function Home() {
           align-items: center;
           gap: 10px;
           color: #8d5a23;
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 12px;
+          font-weight: 600;
         }
         .card-label i {
-          width: 30px;
-          height: 30px;
+          width: 28px;
+          height: 28px;
           display: grid;
           place-items: center;
           border-radius: 50%;
           background: #fff2de;
           color: #f09a2a;
           font-style: normal;
-          font-size: 16px;
+          font-size: 15px;
         }
         .tone-violet .card-label { color: #4d3eb0; }
         .tone-violet .card-label i { background: #efedff; color: #7565dd; }
@@ -910,15 +914,16 @@ export default function Home() {
         .tone-amber .card-label { color: #bf6b25; }
         .insight-card {
           grid-column: span 2;
-          height: 150px;
+          height: 148px;
           min-height: 0;
           background: linear-gradient(135deg, rgba(255,248,238,0.88), rgba(255,255,255,0.72));
         }
         .insight-card h2 {
           max-width: 760px;
           margin-top: 14px;
-          font-size: clamp(19px, 1.25vw, 22px);
-          line-height: 1.34;
+          font-size: clamp(16px, 1vw, 18px);
+          line-height: 1.65;
+          font-weight: 500;
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
@@ -926,20 +931,22 @@ export default function Home() {
         }
         .suggestion-card {
           grid-column: 1 / -1;
-          height: 132px;
+          height: 128px;
           min-height: 0;
           padding-right: 300px;
         }
         .suggestion-card p {
           max-width: 640px;
           padding-left: 24px;
+          font-size: 13px;
+          line-height: 1.72;
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
         .perspective-section {
-          margin-top: 28px;
+          margin-top: 30px;
         }
         .perspective-head {
           display: flex;
@@ -951,14 +958,14 @@ export default function Home() {
         .perspective-head h2 {
           margin: 0;
           color: #302820;
-          font-size: 22px;
+          font-size: 19px;
           line-height: 1.3;
-          font-weight: 800;
+          font-weight: 600;
         }
         .perspective-head p {
           margin: 6px 0 0;
           color: #8a7c6d;
-          font-size: 14px;
+          font-size: 13px;
           line-height: 1.65;
         }
         .perspective-list {
@@ -968,8 +975,8 @@ export default function Home() {
         }
         .perspective-card {
           min-width: 0;
-          min-height: 164px;
-          padding: 18px 18px 16px;
+          min-height: 150px;
+          padding: 16px 16px 15px;
           border: 1px solid rgba(132,96,59,0.14);
           border-radius: 15px;
           background:
@@ -979,26 +986,32 @@ export default function Home() {
           text-align: left;
           overflow: hidden;
         }
+        .perspective-person {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
         .perspective-card h3 {
-          margin: -36px 0 12px 56px;
+          margin: 0;
           color: #3f342b;
-          font-size: 16px;
+          font-size: 14px;
           line-height: 1.35;
-          font-weight: 800;
+          font-weight: 600;
         }
         .perspective-card p {
           margin: 0;
           color: #5b5047;
-          font-size: 14px;
-          line-height: 1.7;
+          font-size: 13px;
+          line-height: 1.76;
           display: -webkit-box;
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
         .avatar {
-          width: 44px;
-          height: 44px;
+          width: 42px;
+          height: 42px;
           border-radius: 50%;
           object-fit: cover;
           display: block;
@@ -1017,9 +1030,11 @@ export default function Home() {
         .more-perspective h3 {
           margin: 14px 0 10px;
           color: #604c38;
+          font-weight: 600;
         }
         .more-perspective p {
           color: #8d8073;
+          font-size: 13px;
           line-height: 1.7;
         }
         .more-dots {
