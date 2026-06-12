@@ -1,34 +1,42 @@
-// In-memory rate limiting (resets on server restart; fine for Vercel serverless)
-const rateLimitMap = new Map()
+const DAILY_LIMIT = 5
 
-function getRateLimit(ip) {
-  const today = new Date().toISOString().slice(0, 10)
-  const key = `${ip}:${today}`
-  return rateLimitMap.get(key) || 0
+async function getCount(ip) {
+  const key = `rl:${ip}:${new Date().toISOString().slice(0, 10)}`
+  const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${key}`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
+  })
+  const data = await res.json()
+  return parseInt(data.result || '0', 10)
 }
 
-function incrementRateLimit(ip) {
-  const today = new Date().toISOString().slice(0, 10)
-  const key = `${ip}:${today}`
-  const count = (rateLimitMap.get(key) || 0) + 1
-  rateLimitMap.set(key, count)
-  // Clean old keys
-  for (const [k] of rateLimitMap) {
-    if (!k.endsWith(today)) rateLimitMap.delete(k)
-  }
-  return count
+async function incrementCount(ip) {
+  const key = `rl:${ip}:${new Date().toISOString().slice(0, 10)}`
+  const url = `${process.env.UPSTASH_REDIS_REST_URL}/pipeline`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([
+      ['INCR', key],
+      ['EXPIRE', key, 86400],
+    ]),
+  })
+  const data = await res.json()
+  return data[0].result
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   const apiKey = process.env.DEEPSEEK_API_KEY
-  if (!apiKey) return res.status(500).json({ error: '服务配置错误，请联系管理员' })
+  if (!apiKey) return res.status(500).json({ error: '服务配置错误' })
 
-  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown'
-  const DAILY_LIMIT = 5
+  const ip = (req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown').trim()
 
-  const used = getRateLimit(ip)
+  const used = await getCount(ip)
   if (used >= DAILY_LIMIT) {
     return res.status(429).json({
       error: `你今天已使用 ${DAILY_LIMIT} 次，明天再来吧 🌙`,
@@ -68,7 +76,7 @@ items至少3条，最多6条。语言简体中文，温暖、不评判。`
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
@@ -81,17 +89,15 @@ items至少3条，最多6条。语言简体中文，温暖、不评判。`
     })
 
     const data = await response.json()
-
     if (!response.ok) {
-      const msg = data?.error?.message || '请求失败'
-      return res.status(response.status).json({ error: msg })
+      return res.status(response.status).json({ error: data?.error?.message || '请求失败' })
     }
 
     const raw = data?.choices?.[0]?.message?.content || ''
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
 
-    const newCount = incrementRateLimit(ip)
+    const newCount = await incrementCount(ip)
     const remaining = DAILY_LIMIT - newCount
 
     return res.status(200).json({ ...parsed, remaining })
