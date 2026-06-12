@@ -8,6 +8,12 @@ const TYPE_CONFIG = {
   need:       { label: '内在需要', color: '#7C2D12', bg: '#FFF7ED', dot: '#F97316' },
 }
 
+const PROMPT_EXAMPLES = [
+  '我总觉得别人不够在乎我，但又不好意思直接说。',
+  '最近很容易烦，一点小事就想逃开。',
+  '我明明很努力，却还是觉得自己不够好。',
+]
+
 function formatTime(ts) {
   const d = new Date(ts)
   const mo = d.getMonth() + 1
@@ -31,6 +37,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(true)
   const [activeId, setActiveId] = useState(null)
+  const [reportTime, setReportTime] = useState(null)
   const resultRef = useRef(null)
 
   useEffect(() => {
@@ -66,13 +73,14 @@ export default function Home() {
     const next = history.filter(h => h.id !== id)
     setHistory(next)
     localStorage.setItem('gx_history', JSON.stringify(next))
-    if (activeId === id) { setResult(null); setText(''); setActiveId(null) }
+    if (activeId === id) { setResult(null); setText(''); setActiveId(null); setReportTime(null) }
   }
 
   function loadHistory(entry) {
     setActiveId(entry.id)
     setText(entry.text)
     setResult(entry.result)
+    setReportTime(entry.ts)
     setError('')
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
   }
@@ -83,6 +91,7 @@ export default function Home() {
     setResult(null)
     setError('')
     setActiveId(null)
+    setReportTime(null)
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -93,9 +102,11 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error || '分析失败')
       setResult(data)
       if (data.remaining !== undefined) setRemaining(data.remaining)
-      const entry = { id: Date.now(), text: text.trim(), result: data, ts: Date.now() }
+      const ts = Date.now()
+      const entry = { id: ts, text: text.trim(), result: data, ts }
       saveHistory(entry)
       setActiveId(entry.id)
+      setReportTime(ts)
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
     } catch (e) {
       setError(e.message)
@@ -109,7 +120,16 @@ export default function Home() {
     setResult(null)
     setError('')
     setActiveId(null)
+    setReportTime(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function useExample(example) {
+    setText(example)
+    setResult(null)
+    setError('')
+    setActiveId(null)
+    setReportTime(null)
   }
 
   return (
@@ -180,21 +200,39 @@ export default function Home() {
           </header>
 
           <div className="content">
-            {/* Input card */}
-            <div className="card input-card">
-              <p className="input-hint">
-                把你想说的、正在烦的、刚刚经历的，用自己的话写下来。
+            <section className="intro">
+              <div className="eyebrow">AI 心理投射分析</div>
+              <h1>把一句卡在心里的话，慢慢看清楚。</h1>
+              <p>
+                观心会从投射、真实感受、情绪和内在需要四个角度，帮你整理一段话背后的内心线索。
               </p>
+            </section>
+
+            <div className="card input-card">
+              <div className="input-head">
+                <div>
+                  <div className="card-kicker">开始观心</div>
+                  <h2>写下你此刻最真实的一段话</h2>
+                </div>
+                <span className="privacy-note">仅用于本次分析</span>
+              </div>
               <textarea
                 className="textarea"
                 value={text}
                 onChange={e => setText(e.target.value)}
-                placeholder="比如：他总是不在乎我的感受，所有人都觉得我太敏感了……"
-                rows={5}
+                placeholder="比如：他总是不在乎我的感受，所有人都觉得我太敏感了，可我只是希望有人能认真听我说完。"
+                rows={7}
                 disabled={loading}
               />
+              <div className="example-row">
+                {PROMPT_EXAMPLES.map(example => (
+                  <button key={example} className="example-chip" onClick={() => useExample(example)} disabled={loading}>
+                    {example}
+                  </button>
+                ))}
+              </div>
               <div className="input-footer">
-                <span className="char-count">{text.length} 字</span>
+                <span className="char-count">{text.length} 字 · 建议 30 字以上</span>
                 <div className="btn-row">
                   {(text || result) && (
                     <button className="btn-ghost" onClick={newAnalysis}>清空</button>
@@ -222,13 +260,19 @@ export default function Home() {
             {/* Result */}
             {result && (
               <div ref={resultRef} className="result">
-                {/* Summary */}
-                <div className="card result-section">
+                <div className="result-hero">
+                  <div>
+                    <div className="eyebrow">观心报告</div>
+                    <h2>这段话里，真正想被看见的部分</h2>
+                  </div>
+                  {reportTime && <span className="report-meta">{formatTime(reportTime)}</span>}
+                </div>
+
+                <div className="card result-section summary-section">
                   <div className="section-label">整体感知</div>
                   <p className="summary-text">{result.summary}</p>
                 </div>
 
-                {/* Items */}
                 <div className="card result-section">
                   <div className="section-label">逐层分析</div>
                   <div className="items">
@@ -237,6 +281,7 @@ export default function Home() {
                       return (
                         <div key={i} className="item">
                           <div className="item-top">
+                            <span className="item-index">{String(i + 1).padStart(2, '0')}</span>
                             <span className="item-badge" style={{ background: cfg.bg, color: cfg.color }}>
                               <span className="item-dot" style={{ background: cfg.dot }} />
                               {cfg.label}
@@ -250,7 +295,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Suggestion */}
                 <div className="card suggestion-card">
                   <div className="section-label">给自己的一句话</div>
                   <p className="suggestion-text">{result.suggestion}</p>
@@ -270,8 +314,10 @@ export default function Home() {
 
         body {
           font-family: -apple-system, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
-          background: #F5F5F7;
-          color: #1D1D1F;
+          background:
+            radial-gradient(circle at 50% -10%, rgba(220, 211, 190, 0.36), transparent 38%),
+            linear-gradient(180deg, #F7F4EE 0%, #F4F5F7 46%, #F8F8F6 100%);
+          color: #1E1E1C;
           line-height: 1.6;
         }
 
@@ -381,13 +427,13 @@ export default function Home() {
         /* Header */
         .header {
           position: sticky; top: 0; z-index: 10;
-          background: rgba(245,245,247,0.85);
+          background: rgba(247,244,238,0.82);
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border-bottom: 1px solid rgba(0,0,0,0.08);
+          border-bottom: 1px solid rgba(71,63,49,0.1);
         }
         .header-inner {
-          max-width: 720px; margin: 0 auto;
+          max-width: 820px; margin: 0 auto;
           height: 56px; padding: 0 2rem;
           display: flex; align-items: center; justify-content: space-between;
         }
@@ -406,71 +452,146 @@ export default function Home() {
         .hamburger:hover { background: rgba(0,0,0,0.06); }
 
         .quota {
-          font-size: 12px; color: #6E6E73;
-          background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 20px;
+          font-size: 12px; color: #5D574F;
+          background: rgba(255,255,255,0.72); padding: 5px 11px; border-radius: 999px;
+          border: 1px solid rgba(71,63,49,0.08);
         }
 
         /* Content */
         .content {
-          max-width: 720px; margin: 0 auto;
-          padding: 2rem 2rem 6rem;
+          max-width: 820px; margin: 0 auto;
+          padding: 3.5rem 2rem 6rem;
           width: 100%;
+        }
+
+        .intro {
+          padding: 18px 2px 24px;
+        }
+        .eyebrow, .card-kicker {
+          font-size: 12px;
+          font-weight: 650;
+          color: #8B6F3D;
+          letter-spacing: 0.08em;
+        }
+        .intro h1 {
+          max-width: 680px;
+          margin-top: 10px;
+          font-size: 38px;
+          line-height: 1.18;
+          font-weight: 720;
+          color: #1E1E1C;
+        }
+        .intro p {
+          max-width: 640px;
+          margin-top: 14px;
+          font-size: 16px;
+          line-height: 1.9;
+          color: #5F5A52;
         }
 
         /* Card */
         .card {
           background: #FFFFFF;
-          border-radius: 18px;
-          border: 1px solid rgba(0,0,0,0.06);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+          border-radius: 16px;
+          border: 1px solid rgba(71,63,49,0.1);
+          box-shadow: 0 18px 48px rgba(42,37,28,0.08), 0 2px 6px rgba(42,37,28,0.04);
           margin-bottom: 16px;
           overflow: hidden;
         }
 
         /* Input card */
-        .input-card { padding: 20px 22px 16px; }
-        .input-hint {
-          font-size: 14px; color: #6E6E73; line-height: 1.8; margin-bottom: 14px;
+        .input-card { padding: 24px; }
+        .input-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .input-head h2 {
+          margin-top: 4px;
+          font-size: 20px;
+          line-height: 1.35;
+          color: #23221F;
+        }
+        .privacy-note {
+          flex-shrink: 0;
+          font-size: 12px;
+          color: #6D675F;
+          background: #F7F2EA;
+          border: 1px solid rgba(139,111,61,0.16);
+          border-radius: 999px;
+          padding: 5px 10px;
         }
         .textarea {
-          width: 100%; font-size: 15px; line-height: 1.8;
-          border: 1px solid rgba(0,0,0,0.1); border-radius: 12px;
-          padding: 13px 15px; resize: vertical;
-          font-family: inherit; color: #1D1D1F; background: #FAFAFA;
-          transition: border-color 0.2s, background 0.2s;
+          width: 100%; min-height: 190px; font-size: 16px; line-height: 1.85;
+          border: 1px solid rgba(71,63,49,0.13); border-radius: 14px;
+          padding: 16px 17px; resize: vertical;
+          font-family: inherit; color: #1E1E1C; background: #FBFAF7;
+          transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
           outline: none;
         }
-        .textarea:focus { border-color: #6366F1; background: #fff; }
-        .textarea::placeholder { color: #C7C7CC; }
+        .textarea:focus {
+          border-color: #A47B35;
+          background: #fff;
+          box-shadow: 0 0 0 4px rgba(164,123,53,0.1);
+        }
+        .textarea::placeholder { color: #B7B1A7; }
         .textarea:disabled { opacity: 0.6; }
+
+        .example-row {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 12px;
+        }
+        .example-chip {
+          min-height: 46px;
+          padding: 9px 10px;
+          border-radius: 12px;
+          background: #F7F6F2;
+          color: #625D55;
+          border: 1px solid rgba(71,63,49,0.08);
+          font-size: 12px;
+          line-height: 1.5;
+          text-align: left;
+          transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .example-chip:hover:not(:disabled) {
+          background: #F2ECE0;
+          border-color: rgba(139,111,61,0.2);
+          color: #3D3933;
+        }
+        .example-chip:disabled { cursor: not-allowed; opacity: 0.6; }
 
         .input-footer {
           display: flex; align-items: center; justify-content: space-between;
-          margin-top: 12px;
+          margin-top: 16px;
         }
-        .char-count { font-size: 12px; color: #AEAEB2; }
+        .char-count { font-size: 12px; color: #918B82; }
         .btn-row { display: flex; gap: 8px; align-items: center; }
 
         /* Buttons */
         button { font-family: inherit; cursor: pointer; border: none; background: none; }
 
         .btn-ghost {
-          font-size: 14px; color: #6E6E73;
+          font-size: 14px; color: #625D55;
           padding: 8px 16px; border-radius: 10px;
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 1px solid rgba(71,63,49,0.12);
           transition: background 0.15s;
         }
-        .btn-ghost:hover { background: rgba(0,0,0,0.04); }
+        .btn-ghost:hover { background: rgba(71,63,49,0.05); }
 
         .btn-primary {
           font-size: 14px; font-weight: 500; color: #fff;
-          padding: 9px 22px; border-radius: 10px;
-          background: #4F46E5;
-          transition: background 0.15s, transform 0.1s;
+          padding: 10px 24px; border-radius: 10px;
+          background: #1F1F1D;
+          box-shadow: 0 10px 22px rgba(31,31,29,0.16);
+          transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
         }
-        .btn-primary:hover:not(.disabled) { background: #4338CA; }
+        .btn-primary:hover:not(.disabled) { background: #3C3428; box-shadow: 0 12px 24px rgba(60,52,40,0.18); }
         .btn-primary:active:not(.disabled) { transform: scale(0.98); }
-        .btn-primary.disabled { background: #C7C7CC; cursor: not-allowed; }
+        .btn-primary.disabled { background: #C8C2B8; cursor: not-allowed; box-shadow: none; }
 
         .loading-inner { display: flex; align-items: center; gap: 7px; }
         .spinner {
@@ -490,21 +611,50 @@ export default function Home() {
         }
 
         /* Result */
-        .result-section { padding: 20px 22px; }
+        .result { padding-top: 14px; }
+        .result-hero {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 18px;
+          padding: 10px 2px 18px;
+        }
+        .result-hero h2 {
+          margin-top: 7px;
+          font-size: 26px;
+          line-height: 1.28;
+          color: #1E1E1C;
+        }
+        .report-meta {
+          flex-shrink: 0;
+          color: #8B857B;
+          font-size: 12px;
+          padding-bottom: 4px;
+        }
+        .result-section { padding: 22px 24px; }
+        .summary-section {
+          background: linear-gradient(180deg, #FFFFFF 0%, #FBF8F1 100%);
+        }
         .section-label {
-          font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
-          color: #AEAEB2; text-transform: uppercase; margin-bottom: 12px;
+          font-size: 11px; font-weight: 650; letter-spacing: 0.12em;
+          color: #9A7C43; text-transform: uppercase; margin-bottom: 12px;
         }
         .summary-text {
-          font-size: 15px; color: #1D1D1F; line-height: 1.9;
+          font-size: 16px; color: #2E2C28; line-height: 1.95;
         }
 
-        .items { display: flex; flex-direction: column; gap: 14px; }
+        .items { display: flex; flex-direction: column; gap: 12px; }
         .item {
-          padding: 14px 16px; border-radius: 12px;
-          background: #FAFAFA; border: 1px solid rgba(0,0,0,0.05);
+          padding: 16px; border-radius: 14px;
+          background: #FAFAF8; border: 1px solid rgba(71,63,49,0.08);
         }
-        .item-top { margin-bottom: 8px; }
+        .item-top { margin-bottom: 9px; display: flex; align-items: center; gap: 8px; }
+        .item-index {
+          font-size: 11px;
+          font-weight: 650;
+          color: #AAA399;
+          min-width: 22px;
+        }
         .item-badge {
           display: inline-flex; align-items: center; gap: 5px;
           font-size: 11px; font-weight: 600; padding: 3px 10px 3px 7px;
@@ -512,16 +662,21 @@ export default function Home() {
         }
         .item-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
         .item-quote {
-          font-size: 14px; color: #3A3A3C; font-style: italic;
-          line-height: 1.7; margin-bottom: 6px;
+          font-size: 15px; color: #30302D; font-style: italic;
+          line-height: 1.75; margin-bottom: 7px;
         }
         .item-explain {
-          font-size: 13px; color: #6E6E73; line-height: 1.8;
+          font-size: 14px; color: #666158; line-height: 1.85;
         }
 
-        .suggestion-card { padding: 20px 22px; }
+        .suggestion-card {
+          padding: 24px;
+          background: #24231F;
+          border-color: #24231F;
+        }
+        .suggestion-card .section-label { color: #D0B987; }
         .suggestion-text {
-          font-size: 16px; color: #4F46E5; line-height: 1.9; font-style: italic;
+          font-size: 18px; color: #FFF8E8; line-height: 1.9; font-style: italic;
         }
 
         .result-actions {
@@ -548,8 +703,19 @@ export default function Home() {
           }
           .main { margin-left: 0 !important; }
           .brand-sub { display: none; }
-          .content { padding: 1.25rem 1rem 5rem; }
+          .content { padding: 1.5rem 1rem 5rem; }
           .header-inner { padding: 0 1rem; }
+          .intro { padding-top: 12px; }
+          .intro h1 { font-size: 29px; }
+          .intro p { font-size: 14px; }
+          .input-card { padding: 18px; }
+          .input-head { flex-direction: column; gap: 10px; }
+          .privacy-note { align-self: flex-start; }
+          .example-row { grid-template-columns: 1fr; }
+          .input-footer { align-items: stretch; flex-direction: column; gap: 12px; }
+          .btn-row { justify-content: flex-end; }
+          .result-hero { align-items: flex-start; flex-direction: column; gap: 8px; }
+          .result-hero h2 { font-size: 22px; }
         }
       `}</style>
     </>
