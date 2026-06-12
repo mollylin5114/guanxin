@@ -28,7 +28,8 @@ export default function Home() {
   const [error, setError] = useState('')
   const [remaining, setRemaining] = useState(null)
   const [history, setHistory] = useState([])
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [activeId, setActiveId] = useState(null)
   const resultRef = useRef(null)
 
@@ -37,6 +38,16 @@ export default function Home() {
       const saved = JSON.parse(localStorage.getItem('gx_history') || '[]')
       setHistory(saved)
     } catch {}
+    // Detect mobile and set sidebar default
+    const mq = window.matchMedia('(max-width: 640px)')
+    const handleMq = (e) => {
+      setIsMobile(e.matches)
+      if (!e.matches) setSidebarOpen(true)
+      else setSidebarOpen(false)
+    }
+    setIsMobile(mq.matches)
+    setSidebarOpen(!mq.matches)
+    mq.addEventListener('change', handleMq)
     // Fetch remaining count on load
     fetch('/api/remaining')
       .then(r => r.json())
@@ -112,7 +123,10 @@ export default function Home() {
 
       <div className="app">
         {/* ── Sidebar ── */}
-        <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+        {isMobile && sidebarOpen && (
+          <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+        )}
+        <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'} ${isMobile ? 'mobile' : ''}`}>
           <div className="sidebar-header">
             {sidebarOpen && <span className="sidebar-title">历史记录</span>}
             <button className="icon-btn" onClick={() => setSidebarOpen(o => !o)} title={sidebarOpen ? '收起' : '展开'}>
@@ -152,6 +166,11 @@ export default function Home() {
           <header className="header">
             <div className="header-inner">
               <div className="brand">
+                {isMobile && (
+                  <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} title="历史记录">
+                    ☰
+                  </button>
+                )}
                 <span className="brand-name">观心</span>
                 <span className="brand-dot" />
                 <span className="brand-sub">看见自己真正在说什么</span>
@@ -376,6 +395,16 @@ export default function Home() {
         .brand-name { font-size: 17px; font-weight: 600; letter-spacing: 4px; color: #1D1D1F; }
         .brand-dot { width: 4px; height: 4px; border-radius: 50%; background: #AEAEB2; }
         .brand-sub { font-size: 13px; color: #6E6E73; }
+        .hamburger {
+          width: 32px; height: 32px; border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 16px; color: #6E6E73;
+          background: none; border: none; cursor: pointer;
+          margin-right: 4px;
+          transition: background 0.15s;
+        }
+        .hamburger:hover { background: rgba(0,0,0,0.06); }
+
         .quota {
           font-size: 12px; color: #6E6E73;
           background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 20px;
@@ -500,12 +529,27 @@ export default function Home() {
         }
 
         /* Mobile */
+        .sidebar-overlay {
+          display: none;
+        }
         @media (max-width: 640px) {
-          .sidebar.open { width: 200px; }
-          .main { margin-left: 200px; }
-          .sidebar.closed ~ .main { margin-left: 48px; }
+          .sidebar.mobile {
+            position: fixed;
+            z-index: 30;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+          }
+          .sidebar.mobile.open { width: 260px; }
+          .sidebar.mobile.closed { width: 0; border-right: none; }
+          .sidebar-overlay {
+            display: block;
+            position: fixed; inset: 0; z-index: 25;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(2px);
+          }
+          .main { margin-left: 0 !important; }
           .brand-sub { display: none; }
           .content { padding: 1.25rem 1rem 5rem; }
+          .header-inner { padding: 0 1rem; }
         }
       `}</style>
     </>
