@@ -37,6 +37,11 @@ export default function Home() {
       const saved = JSON.parse(localStorage.getItem('gx_history') || '[]')
       setHistory(saved)
     } catch {}
+    // Fetch remaining count on load
+    fetch('/api/remaining')
+      .then(r => r.json())
+      .then(d => { if (d.remaining !== undefined) setRemaining(d.remaining) })
+      .catch(() => {})
   }, [])
 
   function saveHistory(entry) {
@@ -99,8 +104,8 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>观心 ·</title>
-        <meta name="description" content="我只是一面镜子，帮你分辨话语中的投射、真实感受与内在需要" />
+        <title>观心 · 看见自己真正在说什么</title>
+        <meta name="description" content="用 AI 帮你分辨话语中的投射、真实感受与内在需要" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪞</text></svg>" />
       </Head>
@@ -116,23 +121,28 @@ export default function Home() {
           </div>
 
           {sidebarOpen && (
-            <div className="sidebar-list">
-              {history.length === 0 ? (
-                <p className="sidebar-empty">暂无记录</p>
-              ) : history.map(entry => (
-                <div
-                  key={entry.id}
-                  className={`sidebar-item ${activeId === entry.id ? 'active' : ''}`}
-                  onClick={() => loadHistory(entry)}
-                >
-                  <div className="sidebar-item-text">{excerpt(entry.text)}</div>
-                  <div className="sidebar-item-meta">
-                    <span>{formatTime(entry.ts)}</span>
-                    <button className="delete-btn" onClick={e => deleteHistory(entry.id, e)}>×</button>
+            <>
+              <div className="sidebar-list">
+                {history.length === 0 ? (
+                  <p className="sidebar-empty">暂无记录</p>
+                ) : history.map(entry => (
+                  <div
+                    key={entry.id}
+                    className={`sidebar-item ${activeId === entry.id ? 'active' : ''}`}
+                    onClick={() => loadHistory(entry)}
+                  >
+                    <div className="sidebar-item-text">{excerpt(entry.text)}</div>
+                    <div className="sidebar-item-meta">
+                      <span>{formatTime(entry.ts)}</span>
+                      <button className="delete-btn" onClick={e => deleteHistory(entry.id, e)}>×</button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <div className="sidebar-footer">
+                <button className="btn-new" onClick={newAnalysis}>＋ 新建</button>
+              </div>
+            </>
           )}
         </aside>
 
@@ -144,11 +154,9 @@ export default function Home() {
               <div className="brand">
                 <span className="brand-name">观心</span>
                 <span className="brand-dot" />
-                <span className="brand-sub"> </span>
+                <span className="brand-sub">看见自己真正在说什么</span>
               </div>
-              {remaining !== null && (
-                <span className="quota">今日剩余 {remaining} 次</span>
-              )}
+              <span className="quota">今日剩余 {remaining !== null ? remaining : '…'} 次</span>
             </div>
           </header>
 
@@ -326,6 +334,20 @@ export default function Home() {
         }
         .sidebar-item:hover .delete-btn { opacity: 1; }
         .delete-btn:hover { color: #FF3B30; }
+
+        .sidebar-footer {
+          padding: 10px 8px 14px;
+          border-top: 1px solid rgba(0,0,0,0.06);
+          flex-shrink: 0;
+        }
+        .btn-new {
+          width: 100%; padding: 9px; border-radius: 10px;
+          font-size: 13px; font-weight: 500; color: #4F46E5;
+          background: rgba(99,102,241,0.08);
+          border: none; cursor: pointer;
+          transition: background 0.15s;
+        }
+        .btn-new:hover { background: rgba(99,102,241,0.15); }
 
         /* ── Main ── */
         .main {
