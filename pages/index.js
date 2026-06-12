@@ -10,11 +10,6 @@ const TYPE_CONFIG = {
 
 const NAV_ITEMS = [
   { icon: '✎', label: '写一篇' },
-  { icon: '▧', label: '日记本' },
-  { icon: '⌁', label: '成长轨迹' },
-  { icon: '♡', label: '今日洞见' },
-  { icon: '☆', label: '收藏' },
-  { icon: '♙', label: '我的' },
 ]
 
 const STARTERS = [
@@ -50,7 +45,7 @@ function findItem(result, type, fallbackIndex = 0) {
 function compactTitle(item, fallback) {
   const raw = item?.quote?.replace(/[“”"「」]/g, '').trim()
   if (!raw) return fallback
-  if (raw.length <= 8) return raw
+  if (raw.length <= 5) return raw
   return fallback
 }
 
@@ -208,7 +203,6 @@ export default function Home() {
           <div className="history-block">
             <div className="history-head">
               <span>历史记录</span>
-              <button>全部 ›</button>
             </div>
             <div className="history-list">
               {history.length === 0 ? (
@@ -239,8 +233,7 @@ export default function Home() {
               <button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="打开导航">☰</button>
             )}
             <div className="top-spacer" />
-            <button className="save-btn">存入日记</button>
-            <button className="more-btn" aria-label="更多">•••</button>
+            <div className="quota-pill">今日剩余 {remaining !== null ? remaining : '…'} 次</div>
           </header>
 
           {!result ? (
@@ -259,14 +252,6 @@ export default function Home() {
                   disabled={loading}
                   maxLength={1000}
                 />
-                {!text && (
-                  <div className="example-box">
-                    <div className="example-title">✐ 比如：</div>
-                    <ul>
-                      {PROMPT_EXAMPLES.map(example => <li key={example}>{example}</li>)}
-                    </ul>
-                  </div>
-                )}
                 <div className="write-count">{text.length}/1000</div>
               </section>
 
@@ -327,7 +312,7 @@ export default function Home() {
 
                 <article className="report-card need-card">
                   <CardLabel item={needItem} fallback="你此刻的需要" />
-                  <h2>{compactTitle(needItem, '确定感')}</h2>
+                  <h2>{compactTitle(needItem, '连接感')}</h2>
                   <p>{needItem?.explain || result.summary}</p>
                   <div className="mountain green" />
                 </article>
@@ -379,15 +364,17 @@ export default function Home() {
           width: 276px;
           flex: 0 0 276px;
           min-height: 100vh;
-          padding: 34px 22px 24px;
+          max-height: 100vh;
+          padding: 34px 22px 20px;
           border-right: 1px solid rgba(121, 88, 54, 0.13);
           background: rgba(250, 244, 235, 0.72);
           backdrop-filter: blur(18px);
           display: flex;
           flex-direction: column;
-          gap: 28px;
+          gap: 24px;
           position: sticky;
           top: 0;
+          overflow: hidden;
         }
         .brand-mark {
           padding: 0;
@@ -419,7 +406,12 @@ export default function Home() {
         .nav-item span { width: 20px; color: #65462d; font-size: 18px; }
         .nav-item.active,
         .nav-item:hover { background: #efe1cf; }
-        .history-block { min-height: 0; }
+        .history-block {
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+        }
         .history-head {
           display: flex;
           justify-content: space-between;
@@ -428,15 +420,12 @@ export default function Home() {
           color: #614b37;
           font-size: 14px;
         }
-        .history-head button {
-          background: transparent;
-          color: #9c8d7e;
-          font-size: 12px;
-        }
         .history-list {
           display: grid;
+          align-content: start;
           gap: 9px;
-          max-height: 360px;
+          flex: 1;
+          min-height: 0;
           overflow: auto;
           padding-right: 2px;
         }
@@ -455,6 +444,7 @@ export default function Home() {
           display: block;
           font-size: 13px;
           line-height: 1.55;
+          overflow-wrap: anywhere;
         }
         .history-item small {
           display: block;
@@ -478,8 +468,8 @@ export default function Home() {
           font-size: 13px;
         }
         .sidebar-note {
-          margin-top: auto;
-          min-height: 170px;
+          flex: 0 0 auto;
+          min-height: 132px;
           padding: 24px 18px;
           border-radius: 16px;
           border: 1px solid rgba(158, 125, 83, 0.16);
@@ -520,25 +510,20 @@ export default function Home() {
           margin-bottom: 28px;
         }
         .top-spacer { flex: 1; }
-        .mobile-menu, .save-btn, .more-btn {
+        .mobile-menu, .quota-pill {
           background: rgba(255,255,255,0.68);
           color: #6a4d33;
           border: 1px solid rgba(137,101,62,0.18);
           border-radius: 13px;
         }
         .mobile-menu { display: none; width: 40px; height: 40px; }
-        .save-btn {
+        .quota-pill {
+          display: inline-flex;
+          align-items: center;
           height: 38px;
-          padding: 0 18px;
+          padding: 0 16px;
           font-size: 14px;
-        }
-        .more-btn {
-          width: 42px;
-          height: 38px;
-          border-color: transparent;
-          background: transparent;
-          letter-spacing: 0.14em;
-          font-weight: 700;
+          white-space: nowrap;
         }
         .home-page, .report-page {
           max-width: 1060px;
@@ -565,28 +550,28 @@ export default function Home() {
         .hero-copy {
           position: relative;
           z-index: 1;
-          padding: 70px 0 44px 30px;
+          padding: 58px 0 34px 30px;
         }
         .hero-copy h1, .report-title {
           margin: 0;
           color: #2f2821;
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: clamp(42px, 4.2vw, 60px);
+          font-size: clamp(38px, 3.7vw, 54px);
           line-height: 1.45;
           letter-spacing: 0.02em;
           font-weight: 800;
         }
         .hero-copy p {
-          margin: 26px 0 0;
+          margin: 20px 0 0;
           color: #74685c;
-          font-size: 20px;
-          line-height: 1.9;
+          font-size: 18px;
+          line-height: 1.8;
         }
         .write-card {
           position: relative;
           z-index: 1;
-          min-height: 380px;
-          padding: 30px 34px 48px;
+          min-height: 230px;
+          padding: 24px 28px 44px;
           border: 1px solid rgba(131, 98, 61, 0.18);
           border-radius: 18px;
           background: rgba(255,255,255,0.72);
@@ -594,38 +579,16 @@ export default function Home() {
         }
         .write-card textarea {
           width: 100%;
-          min-height: 108px;
+          min-height: 150px;
           resize: vertical;
           border: 0;
           outline: 0;
           background: transparent;
           color: #352e27;
-          font-size: 18px;
-          line-height: 1.8;
+          font-size: 17px;
+          line-height: 1.7;
         }
         .write-card textarea::placeholder { color: #a99d91; }
-        .example-box {
-          width: min(100%, 520px);
-          margin-top: 34px;
-          padding: 22px 26px;
-          border-radius: 13px;
-          border: 1px solid rgba(143,104,63,0.17);
-          background: rgba(250,246,239,0.78);
-          color: #7a6d61;
-        }
-        .example-title {
-          margin-bottom: 10px;
-          color: #795a3b;
-          font-size: 15px;
-        }
-        .example-box ul {
-          margin: 0;
-          padding-left: 18px;
-          display: grid;
-          gap: 10px;
-          font-size: 14px;
-          line-height: 1.75;
-        }
         .write-count {
           position: absolute;
           right: 28px;
@@ -637,7 +600,7 @@ export default function Home() {
           display: flex;
           justify-content: space-between;
           gap: 16px;
-          margin: 22px 8px 34px;
+          margin: 16px 8px 28px;
           color: #918579;
           font-size: 14px;
         }
@@ -651,13 +614,13 @@ export default function Home() {
         }
         .primary-cta {
           width: 100%;
-          height: 78px;
+          height: 64px;
           border-radius: 18px;
           background: linear-gradient(135deg, #6c4d2e, #3a2818);
           color: #fffaf2;
           box-shadow: 0 16px 34px rgba(64,43,24,0.28);
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: 28px;
+          font-size: 24px;
           letter-spacing: 0.08em;
         }
         .primary-cta:disabled {
@@ -666,7 +629,7 @@ export default function Home() {
           box-shadow: none;
         }
         .starter-section {
-          margin-top: 54px;
+          margin-top: 44px;
           text-align: center;
         }
         .divider-title {
@@ -689,7 +652,7 @@ export default function Home() {
           gap: 18px;
         }
         .starter-grid button {
-          min-height: 128px;
+          min-height: 110px;
           padding: 22px 16px;
           border: 1px solid rgba(151,111,68,0.18);
           border-radius: 13px;
@@ -711,7 +674,7 @@ export default function Home() {
           font-size: 16px;
         }
         .privacy-line {
-          margin: 36px 0 0;
+          margin: 28px 0 0;
           text-align: center;
           color: #aaa096;
           font-size: 14px;
@@ -774,7 +737,7 @@ export default function Home() {
         }
         .report-title {
           margin: 24px 0 20px 10px;
-          font-size: clamp(30px, 2.55vw, 40px);
+          font-size: clamp(28px, 2.25vw, 36px);
           line-height: 1.18;
         }
         .report-grid {
@@ -785,9 +748,9 @@ export default function Home() {
         .report-card {
           position: relative;
           min-width: 0;
-          height: 224px;
+          height: 210px;
           min-height: 0;
-          padding: 20px 22px;
+          padding: 18px 20px;
           border: 1px solid rgba(132,96,59,0.15);
           border-radius: 16px;
           background: rgba(255,255,255,0.68);
@@ -800,7 +763,7 @@ export default function Home() {
           margin: 16px 0 12px;
           color: #2c251f;
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: clamp(24px, 1.75vw, 30px);
+          font-size: clamp(22px, 1.55vw, 27px);
           line-height: 1.15;
           letter-spacing: 0;
           overflow-wrap: anywhere;
@@ -811,8 +774,8 @@ export default function Home() {
           z-index: 1;
           margin: 0;
           color: #4d443b;
-          font-size: 14px;
-          line-height: 1.62;
+          font-size: 13px;
+          line-height: 1.55;
           overflow-wrap: anywhere;
         }
         .theme-card p,
@@ -827,7 +790,7 @@ export default function Home() {
         .focus-card blockquote {
           color: #4d3eb0;
           font-family: 'Songti SC', 'STSong', 'SimSun', serif;
-          font-size: clamp(17px, 1.18vw, 20px);
+          font-size: clamp(16px, 1.05vw, 18px);
           font-weight: 800;
           line-height: 1.4;
           margin: 16px 0 12px;
@@ -841,19 +804,19 @@ export default function Home() {
           align-items: center;
           gap: 10px;
           color: #8d5a23;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 700;
         }
         .card-label i {
-          width: 32px;
-          height: 32px;
+          width: 30px;
+          height: 30px;
           display: grid;
           place-items: center;
           border-radius: 50%;
           background: #fff2de;
           color: #f09a2a;
           font-style: normal;
-          font-size: 18px;
+          font-size: 16px;
         }
         .tone-violet .card-label { color: #4d3eb0; }
         .tone-violet .card-label i { background: #efedff; color: #7565dd; }
@@ -862,14 +825,14 @@ export default function Home() {
         .tone-amber .card-label { color: #bf6b25; }
         .insight-card {
           grid-column: span 2;
-          height: 164px;
+          height: 150px;
           min-height: 0;
           background: linear-gradient(135deg, rgba(255,248,238,0.88), rgba(255,255,255,0.72));
         }
         .insight-card h2 {
           max-width: 760px;
           margin-top: 14px;
-          font-size: clamp(21px, 1.45vw, 25px);
+          font-size: clamp(19px, 1.25vw, 22px);
           line-height: 1.34;
           display: -webkit-box;
           -webkit-line-clamp: 3;
@@ -878,7 +841,7 @@ export default function Home() {
         }
         .suggestion-card {
           grid-column: 1 / -1;
-          height: 142px;
+          height: 132px;
           min-height: 0;
           padding-right: 300px;
         }
@@ -957,10 +920,23 @@ export default function Home() {
           .need-card, .suggestion-card { grid-column: 1 / -1; }
           .report-page { max-width: 900px; }
           .quote-card { padding: 18px 22px; }
-          .report-card { height: 216px; }
-          .report-card h2 { font-size: 27px; }
-          .insight-card h2 { font-size: 23px; }
+          .report-card { height: 206px; }
+          .report-card h2 { font-size: 25px; }
+          .insight-card h2 { font-size: 21px; }
           .suggestion-card { padding-right: 240px; }
+        }
+
+        @media (max-height: 820px) and (min-width: 781px) {
+          .sidebar {
+            gap: 18px;
+            padding-top: 26px;
+          }
+          .sidebar-note {
+            display: none;
+          }
+          .history-list {
+            padding-bottom: 6px;
+          }
         }
 
         @media (max-width: 780px) {
@@ -998,8 +974,11 @@ export default function Home() {
             backdrop-filter: blur(16px);
           }
           .mobile-menu { display: block; }
-          .save-btn { height: 36px; padding: 0 14px; }
-          .more-btn { width: 34px; }
+          .quota-pill {
+            height: 34px;
+            padding: 0 12px;
+            font-size: 13px;
+          }
           .ambient {
             width: 100%;
             height: 230px;
@@ -1008,10 +987,10 @@ export default function Home() {
             mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
           }
           .hero-copy {
-            padding: 46px 2px 28px;
+            padding: 40px 2px 24px;
           }
           .hero-copy h1, .report-title {
-            font-size: 36px;
+            font-size: 32px;
             line-height: 1.35;
           }
           .hero-copy p {
@@ -1019,17 +998,13 @@ export default function Home() {
             font-size: 16px;
           }
           .write-card {
-            min-height: 330px;
-            padding: 22px 18px 44px;
+            min-height: 220px;
+            padding: 20px 18px 42px;
             border-radius: 16px;
           }
           .write-card textarea {
-            min-height: 132px;
+            min-height: 150px;
             font-size: 16px;
-          }
-          .example-box {
-            margin-top: 20px;
-            padding: 16px 18px;
           }
           .write-meta {
             display: grid;
@@ -1037,7 +1012,7 @@ export default function Home() {
             font-size: 13px;
           }
           .primary-cta {
-            height: 60px;
+            height: 56px;
             border-radius: 15px;
             font-size: 22px;
           }
@@ -1047,7 +1022,7 @@ export default function Home() {
             gap: 12px;
           }
           .starter-grid button {
-            min-height: 104px;
+            min-height: 96px;
             padding: 18px 12px;
           }
           .quote-card {
@@ -1075,13 +1050,13 @@ export default function Home() {
             padding: 20px;
           }
           .report-card h2 {
-            font-size: 28px;
+            font-size: 24px;
           }
           .focus-card blockquote {
-            font-size: 19px;
+            font-size: 17px;
           }
           .insight-card h2 {
-            font-size: 22px;
+            font-size: 20px;
           }
           .suggestion-card {
             padding-right: 22px;
