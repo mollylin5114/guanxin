@@ -1,8 +1,43 @@
+// In-memory rate limiting (resets on server restart; fine for Vercel serverless)
+const rateLimitMap = new Map()
+
+function getRateLimit(ip) {
+  const today = new Date().toISOString().slice(0, 10)
+  const key = `${ip}:${today}`
+  return rateLimitMap.get(key) || 0
+}
+
+function incrementRateLimit(ip) {
+  const today = new Date().toISOString().slice(0, 10)
+  const key = `${ip}:${today}`
+  const count = (rateLimitMap.get(key) || 0) + 1
+  rateLimitMap.set(key, count)
+  // Clean old keys
+  for (const [k] of rateLimitMap) {
+    if (!k.endsWith(today)) rateLimitMap.delete(k)
+  }
+  return count
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { text, apiKey } = req.body
-  if (!text || !apiKey) return res.status(400).json({ error: '缺少必要参数' })
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  if (!apiKey) return res.status(500).json({ error: '服务配置错误，请联系管理员' })
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown'
+  const DAILY_LIMIT = 5
+
+  const used = getRateLimit(ip)
+  if (used >= DAILY_LIMIT) {
+    return res.status(429).json({
+      error: `你今天已使用 ${DAILY_LIMIT} 次，明天再来吧 🌙`,
+      remaining: 0,
+    })
+  }
+
+  const { text } = req.body
+  if (!text) return res.status(400).json({ error: '请输入内容' })
 
   const systemPrompt = `你是一位温柔而敏锐的心理分析师，擅长帮助人识别话语中的投射、真实感受、情绪和内在需要。
 用户会输入一段文字，你需要分析并以JSON格式返回，不要返回任何其他内容，不要有markdown代码块。
@@ -49,16 +84,17 @@ items至少3条，最多6条。语言简体中文，温暖、不评判。`
 
     if (!response.ok) {
       const msg = data?.error?.message || '请求失败'
-      if (response.status === 401) {
-        return res.status(401).json({ error: 'API Key 无效，请检查后重试' })
-      }
       return res.status(response.status).json({ error: msg })
     }
 
     const raw = data?.choices?.[0]?.message?.content || ''
     const clean = raw.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
-    return res.status(200).json(parsed)
+
+    const newCount = incrementRateLimit(ip)
+    const remaining = DAILY_LIMIT - newCount
+
+    return res.status(200).json({ ...parsed, remaining })
   } catch (e) {
     return res.status(500).json({ error: '分析时出现错误，请稍后重试' })
   }
