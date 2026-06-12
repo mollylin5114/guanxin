@@ -25,6 +25,39 @@ const PROMPT_EXAMPLES = [
   '最近发生了一件事，我一直放不下。',
 ]
 
+const PERSPECTIVE_PROFILES = [
+  {
+    name: '庄子',
+    avatar: 'zhuangzi',
+    fallback: '你关注的是对方的矛盾，还是自己对矛盾的不舒服？',
+  },
+  {
+    name: '苏轼',
+    avatar: 'sushi',
+    fallback: '也许可以先把这件事放回风里。人有不安，也可以仍然看见一点明亮。',
+  },
+  {
+    name: '王阳明',
+    avatar: 'wangyangming',
+    fallback: '先回到此刻这颗心。你已经知道哪里不安，也知道哪里需要照见。',
+  },
+  {
+    name: '蒋勋',
+    avatar: 'jiangxun',
+    fallback: '也许这份不舒服里，有一部分是在提醒你珍惜自己的感受。',
+  },
+  {
+    name: '克里希那穆提',
+    avatar: 'krishnamurti',
+    fallback: '观察那个想寻找答案的自己。不要急着解决它。',
+  },
+  {
+    name: '王菲',
+    avatar: 'wangfei',
+    fallback: '她可能不会急着判断，而是先允许自己保留疑惑，感受这件事真实的样子。',
+  },
+]
+
 function formatTime(ts) {
   const d = new Date(ts)
   const mo = d.getMonth() + 1
@@ -49,6 +82,18 @@ function compactTitle(item, fallback) {
   return fallback
 }
 
+function getPerspectives(result) {
+  const fromAi = Array.isArray(result?.perspectives) ? result.perspectives : []
+  return PERSPECTIVE_PROFILES.map(profile => {
+    const matched = fromAi.find(item => item?.avatar === profile.avatar || item?.name === profile.name)
+    const content = matched?.content?.trim()
+    return {
+      ...profile,
+      content: content || profile.fallback,
+    }
+  })
+}
+
 export default function Home() {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -60,6 +105,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(true)
   const [activeId, setActiveId] = useState(null)
   const [reportTime, setReportTime] = useState(null)
+  const [showSoon, setShowSoon] = useState(false)
   const resultRef = useRef(null)
 
   useEffect(() => {
@@ -169,6 +215,7 @@ export default function Home() {
   const realItem = result ? findItem(result, 'real', 1) : null
   const needItem = result ? findItem(result, 'need', 2) : null
   const projectionItem = result ? findItem(result, 'projection', 3) : null
+  const perspectives = result ? getPerspectives(result) : []
 
   return (
     <>
@@ -336,6 +383,34 @@ export default function Home() {
                 </article>
               </div>
 
+              <section className="perspective-section">
+                <div className="perspective-head">
+                  <div>
+                    <h2>换个视角看看</h2>
+                    <p>同一件事，<br />不同的人会看到不同的部分。</p>
+                  </div>
+                </div>
+                <div className="perspective-list">
+                  {perspectives.map(item => (
+                    <article className="perspective-card" key={item.avatar}>
+                      <img className="avatar" src={`/images/perspectives/${item.avatar}.png`} alt={`${item.name}头像`} />
+                      <h3>如果是{item.name}</h3>
+                      <p>{item.content}</p>
+                    </article>
+                  ))}
+                  <button className="perspective-card more-perspective" onClick={() => setShowSoon(true)}>
+                    <div className="more-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <h3>更多视角</h3>
+                    <p>解锁更多人物视角<br />看见不同的可能</p>
+                  </button>
+                </div>
+              </section>
+
               <button className="again-btn" onClick={newAnalysis}>↻ 再写一段</button>
               <p className="privacy-line">▣ 内容仅对你可见，安全守护你的表达</p>
             </section>
@@ -343,11 +418,21 @@ export default function Home() {
         </main>
       </div>
 
+      {showSoon && (
+        <div className="soon-layer" role="dialog" aria-modal="true" onClick={() => setShowSoon(false)}>
+          <div className="soon-dialog" onClick={e => e.stopPropagation()}>
+            <h2>即将上线</h2>
+            <p>更多人物视角还在整理中。</p>
+            <button onClick={() => setShowSoon(false)}>知道了</button>
+          </div>
+        </div>
+      )}
+
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
         body {
           margin: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+          font-family: 'Microsoft YaHei', '微软雅黑', -apple-system, BlinkMacSystemFont, sans-serif;
           color: #332b23;
           background: #fbf8f2;
         }
@@ -380,7 +465,7 @@ export default function Home() {
           padding: 0;
           background: transparent;
           color: #2c241f;
-          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
           font-size: 32px;
           font-weight: 800;
           letter-spacing: 0.03em;
@@ -555,7 +640,7 @@ export default function Home() {
         .hero-copy h1, .report-title {
           margin: 0;
           color: #2f2821;
-          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
           font-size: clamp(38px, 3.7vw, 54px);
           line-height: 1.45;
           letter-spacing: 0.02em;
@@ -619,7 +704,7 @@ export default function Home() {
           background: linear-gradient(135deg, #6c4d2e, #3a2818);
           color: #fffaf2;
           box-shadow: 0 16px 34px rgba(64,43,24,0.28);
-          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
           font-size: 24px;
           letter-spacing: 0.08em;
         }
@@ -716,7 +801,7 @@ export default function Home() {
           border: 1px solid #eadfce;
           border-radius: 50%;
           color: #a57948;
-          font-family: Georgia, serif;
+          font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
           font-size: 36px;
           line-height: 1;
           flex: 0 0 auto;
@@ -762,7 +847,7 @@ export default function Home() {
           z-index: 1;
           margin: 16px 0 12px;
           color: #2c251f;
-          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
           font-size: clamp(22px, 1.55vw, 27px);
           line-height: 1.15;
           letter-spacing: 0;
@@ -789,7 +874,7 @@ export default function Home() {
         }
         .focus-card blockquote {
           color: #4d3eb0;
-          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
           font-size: clamp(16px, 1.05vw, 18px);
           font-weight: 800;
           line-height: 1.4;
@@ -853,6 +938,102 @@ export default function Home() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
+        .perspective-section {
+          margin-top: 28px;
+        }
+        .perspective-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          gap: 20px;
+          margin-bottom: 16px;
+        }
+        .perspective-head h2 {
+          margin: 0;
+          color: #302820;
+          font-size: 22px;
+          line-height: 1.3;
+          font-weight: 800;
+        }
+        .perspective-head p {
+          margin: 6px 0 0;
+          color: #8a7c6d;
+          font-size: 14px;
+          line-height: 1.65;
+        }
+        .perspective-list {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+        }
+        .perspective-card {
+          min-width: 0;
+          min-height: 164px;
+          padding: 18px 18px 16px;
+          border: 1px solid rgba(132,96,59,0.14);
+          border-radius: 15px;
+          background:
+            linear-gradient(145deg, rgba(255,255,255,0.82), rgba(251,246,238,0.76));
+          box-shadow: 0 14px 34px rgba(68,47,28,0.045);
+          color: #3d332b;
+          text-align: left;
+          overflow: hidden;
+        }
+        .perspective-card h3 {
+          margin: -36px 0 12px 56px;
+          color: #3f342b;
+          font-size: 16px;
+          line-height: 1.35;
+          font-weight: 800;
+        }
+        .perspective-card p {
+          margin: 0;
+          color: #5b5047;
+          font-size: 14px;
+          line-height: 1.7;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .avatar {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          object-fit: cover;
+          display: block;
+          box-shadow:
+            0 6px 16px rgba(76,54,34,0.14),
+            inset 0 0 0 1px rgba(255,255,255,0.42);
+        }
+        .more-perspective {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          background: rgba(255,255,255,0.58);
+        }
+        .more-perspective h3 {
+          margin: 14px 0 10px;
+          color: #604c38;
+        }
+        .more-perspective p {
+          color: #8d8073;
+          line-height: 1.7;
+        }
+        .more-dots {
+          width: 38px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+        }
+        .more-dots span {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #7d5836;
+        }
         .mountain,
         .wide-mountain,
         .small-path,
@@ -899,7 +1080,7 @@ export default function Home() {
         }
         .again-btn {
           display: block;
-          margin: 30px auto 0;
+          margin: 28px auto 0;
           height: 48px;
           padding: 0 54px;
           border: 1px solid rgba(139,95,52,0.22);
@@ -909,6 +1090,42 @@ export default function Home() {
           font-size: 16px;
         }
         .overlay { display: none; }
+        .soon-layer {
+          position: fixed;
+          z-index: 60;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background: rgba(49,36,25,0.2);
+          backdrop-filter: blur(6px);
+        }
+        .soon-dialog {
+          width: min(100%, 320px);
+          padding: 28px 26px 24px;
+          border: 1px solid rgba(132,96,59,0.16);
+          border-radius: 18px;
+          background: #fffaf3;
+          box-shadow: 0 24px 70px rgba(64,43,24,0.18);
+          text-align: center;
+        }
+        .soon-dialog h2 {
+          margin: 0 0 10px;
+          color: #352a21;
+          font-size: 22px;
+        }
+        .soon-dialog p {
+          margin: 0 0 22px;
+          color: #817367;
+          font-size: 14px;
+        }
+        .soon-dialog button {
+          height: 40px;
+          padding: 0 28px;
+          border-radius: 999px;
+          background: #5d4026;
+          color: #fff8ed;
+        }
 
         @media (max-width: 1080px) {
           .sidebar {
@@ -924,6 +1141,7 @@ export default function Home() {
           .report-card h2 { font-size: 25px; }
           .insight-card h2 { font-size: 21px; }
           .suggestion-card { padding-right: 240px; }
+          .perspective-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-height: 820px) and (min-width: 781px) {
@@ -1064,6 +1282,28 @@ export default function Home() {
           }
           .suggestion-card p {
             padding-left: 0;
+          }
+          .perspective-section {
+            margin: 26px -16px 0 0;
+          }
+          .perspective-head {
+            padding-right: 16px;
+            margin-bottom: 14px;
+          }
+          .perspective-head h2 {
+            font-size: 20px;
+          }
+          .perspective-list {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 0 16px 8px 0;
+            scroll-snap-type: x proximity;
+          }
+          .perspective-card {
+            flex: 0 0 240px;
+            min-height: 156px;
+            scroll-snap-align: start;
           }
           .window-mark {
             width: 230px;

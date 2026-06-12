@@ -61,7 +61,14 @@ JSON格式如下：
       "explain": "对这一条的分析解释，2-3句，温柔直接"
     }
   ],
-  "suggestion": "一句温暖有力的话，帮助用户看见自己、接纳自己"
+  "suggestion": "一句温暖有力的话，帮助用户看见自己、接纳自己",
+  "perspectives": [
+    {
+      "name": "庄子",
+      "avatar": "zhuangzi",
+      "content": "你关注的是对方的矛盾，还是自己对矛盾的不舒服？"
+    }
+  ]
 }
 
 type说明：
@@ -72,6 +79,25 @@ type说明：
 
 items至少3条，最多6条。语言简体中文，温暖、不评判。`
 
+  const perspectivePrompt = `
+
+perspectives说明：
+- 必须返回6个固定人物，顺序为：庄子、苏轼、王阳明、蒋勋、克里希那穆提、王菲。
+- avatar固定为：zhuangzi、sushi、wangyangming、jiangxun、krishnamurti、wangfei。
+- 每个人模拟面对用户问题时最可能产生的第一反应。
+- 每条content控制在30到60个中文字符，最多3行阅读长度。
+- 不要讲道理，不要人生鸡汤，不要标准建议，不要长篇解释。
+- 允许提问、观察、反转、留白。
+- 风格像翻开一本书时看到的一段批注。
+- 关键词参考：
+  王菲：允许、边界、自处、顺其自然。
+  庄子：逍遥、齐物、无待、跳出执念。
+  苏轼：旷达、流动、苦中见明、与自己和解。
+  克里希那穆提：观察、觉察、停止追逐答案。
+  王阳明：知行合一、向内求、此心光明。
+  蒋勋：审美、生命体验、温柔理解。
+`
+
   try {
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -81,9 +107,9 @@ items至少3条，最多6条。语言简体中文，温暖、不评判。`
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
-        max_tokens: 1200,
+        max_tokens: 1700,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: systemPrompt + perspectivePrompt },
           { role: 'user', content: text },
         ],
       }),
