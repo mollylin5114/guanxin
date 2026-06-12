@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { usePostHog } from 'posthog-js/react'
 import Head from 'next/head'
 
 const TYPE_CONFIG = {
@@ -32,6 +33,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(true)
   const [activeId, setActiveId] = useState(null)
   const resultRef = useRef(null)
+  const posthog = usePostHog()
 
   useEffect(() => {
     try {
@@ -70,6 +72,7 @@ export default function Home() {
   }
 
   function loadHistory(entry) {
+    posthog?.capture('history_viewed')
     setActiveId(entry.id)
     setText(entry.text)
     setResult(entry.result)
@@ -83,6 +86,7 @@ export default function Home() {
     setResult(null)
     setError('')
     setActiveId(null)
+    posthog?.capture('analyze_started', { text_length: text.trim().length })
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -93,18 +97,25 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error || '分析失败')
       setResult(data)
       if (data.remaining !== undefined) setRemaining(data.remaining)
+      posthog?.capture('analyze_success', {
+        remaining: data.remaining,
+        text_length: text.trim().length,
+        types_found: [...new Set(data.items.map(i => i.type))].join(','),
+      })
       const entry = { id: Date.now(), text: text.trim(), result: data, ts: Date.now() }
       saveHistory(entry)
       setActiveId(entry.id)
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
     } catch (e) {
       setError(e.message)
+      posthog?.capture('analyze_error', { error: e.message })
     } finally {
       setLoading(false)
     }
   }
 
   function newAnalysis() {
+    posthog?.capture('new_analysis_clicked')
     setText('')
     setResult(null)
     setError('')
