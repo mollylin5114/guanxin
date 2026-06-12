@@ -237,6 +237,9 @@ export default function Home() {
         <title>观心 · 照见自己</title>
         <meta name="description" content="用 AI 帮你分辨话语中的投射、真实感受与内在需要" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.png" />
+        <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </Head>
 
       <div className="app">
@@ -244,7 +247,9 @@ export default function Home() {
 
         <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
           <div className="brand-panel">
-            <button className="brand-mark" onClick={newAnalysis}>观心</button>
+            <button className="brand-logo" onClick={newAnalysis} aria-label="回到观心首页">
+              <img src="/images/brand-logo.png" alt="观心" />
+            </button>
             <p>照见自己</p>
           </div>
 
@@ -477,17 +482,23 @@ export default function Home() {
           top: 0;
           overflow: hidden;
         }
-        .brand-mark {
+        .brand-logo {
           padding: 0;
           background: transparent;
-          color: #2c241f;
-          font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
-          font-size: 32px;
-          font-weight: 700;
-          letter-spacing: 0.03em;
+          border: 0;
+          display: block;
+          width: 132px;
+          cursor: pointer;
+        }
+        .brand-logo img {
+          display: block;
+          width: 100%;
+          height: auto;
+          border-radius: 14px;
+          box-shadow: 0 10px 24px rgba(92, 60, 32, 0.08);
         }
         .brand-panel p {
-          margin: 8px 0 0;
+          margin: 10px 0 0;
           color: #84776a;
           font-size: 14px;
         }
