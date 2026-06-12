@@ -2,16 +2,32 @@ import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 
 const TYPE_CONFIG = {
-  projection: { label: '投射',     color: '#92400E', bg: '#FEF3C7', dot: '#F59E0B' },
-  real:       { label: '真实感受', color: '#065F46', bg: '#ECFDF5', dot: '#10B981' },
-  emotion:    { label: '情绪',     color: '#3730A3', bg: '#EEF2FF', dot: '#6366F1' },
-  need:       { label: '内在需要', color: '#7C2D12', bg: '#FFF7ED', dot: '#F97316' },
+  projection: { label: '可能被忽略的角度', tone: 'amber', icon: '⌕' },
+  real: { label: '你真正关注的', tone: 'violet', icon: '◉' },
+  emotion: { label: '核心主题', tone: 'orange', icon: '✧' },
+  need: { label: '你此刻的需要', tone: 'green', icon: '♧' },
 }
 
+const NAV_ITEMS = [
+  { icon: '✎', label: '写一篇' },
+  { icon: '▧', label: '日记本' },
+  { icon: '⌁', label: '成长轨迹' },
+  { icon: '♡', label: '今日洞见' },
+  { icon: '☆', label: '收藏' },
+  { icon: '♙', label: '我的' },
+]
+
+const STARTERS = [
+  { icon: '◎', text: '我一直在纠结...' },
+  { icon: '☁', text: '我总是放不下...' },
+  { icon: '♡', text: '我好像在害怕...' },
+  { icon: '?', text: '我越来越怀疑...' },
+]
+
 const PROMPT_EXAMPLES = [
-  '我总觉得别人不够在乎我，但又不好意思直接说。',
-  '最近很容易烦，一点小事就想逃开。',
-  '我明明很努力，却还是觉得自己不够好。',
+  '我明明已经很努力了，却还是觉得自己不够好。',
+  '我很想有个好朋友，但总觉得跟人靠近很难。',
+  '最近发生了一件事，我一直放不下。',
 ]
 
 function formatTime(ts) {
@@ -23,8 +39,12 @@ function formatTime(ts) {
   return `${mo}/${da} ${h}:${m}`
 }
 
-function excerpt(text, len = 28) {
+function excerpt(text, len = 32) {
   return text.length > len ? text.slice(0, len) + '…' : text
+}
+
+function findItem(result, type, fallbackIndex = 0) {
+  return result?.items?.find(item => item.type === type) || result?.items?.[fallbackIndex] || null
 }
 
 export default function Home() {
@@ -45,21 +65,23 @@ export default function Home() {
       const saved = JSON.parse(localStorage.getItem('gx_history') || '[]')
       setHistory(saved)
     } catch {}
-    // Detect mobile and set sidebar default
-    const mq = window.matchMedia('(max-width: 640px)')
+
+    const mq = window.matchMedia('(max-width: 780px)')
     const handleMq = (e) => {
       setIsMobile(e.matches)
-      if (!e.matches) setSidebarOpen(true)
-      else setSidebarOpen(false)
+      setSidebarOpen(!e.matches)
     }
+
     setIsMobile(mq.matches)
     setSidebarOpen(!mq.matches)
     mq.addEventListener('change', handleMq)
-    // Fetch remaining count on load
+
     fetch('/api/remaining')
       .then(r => r.json())
       .then(d => { if (d.remaining !== undefined) setRemaining(d.remaining) })
       .catch(() => {})
+
+    return () => mq.removeEventListener('change', handleMq)
   }, [])
 
   function saveHistory(entry) {
@@ -73,7 +95,12 @@ export default function Home() {
     const next = history.filter(h => h.id !== id)
     setHistory(next)
     localStorage.setItem('gx_history', JSON.stringify(next))
-    if (activeId === id) { setResult(null); setText(''); setActiveId(null); setReportTime(null) }
+    if (activeId === id) {
+      setResult(null)
+      setText('')
+      setActiveId(null)
+      setReportTime(null)
+    }
   }
 
   function loadHistory(entry) {
@@ -82,6 +109,7 @@ export default function Home() {
     setResult(entry.result)
     setReportTime(entry.ts)
     setError('')
+    if (isMobile) setSidebarOpen(false)
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
   }
 
@@ -92,6 +120,7 @@ export default function Home() {
     setError('')
     setActiveId(null)
     setReportTime(null)
+
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -100,13 +129,15 @@ export default function Home() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '分析失败')
-      setResult(data)
-      if (data.remaining !== undefined) setRemaining(data.remaining)
+
       const ts = Date.now()
       const entry = { id: ts, text: text.trim(), result: data, ts }
-      saveHistory(entry)
-      setActiveId(entry.id)
+
+      setResult(data)
       setReportTime(ts)
+      setActiveId(entry.id)
+      if (data.remaining !== undefined) setRemaining(data.remaining)
+      saveHistory(entry)
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
     } catch (e) {
       setError(e.message)
@@ -132,592 +163,910 @@ export default function Home() {
     setReportTime(null)
   }
 
+  const themeItem = result ? findItem(result, 'emotion', 0) : null
+  const realItem = result ? findItem(result, 'real', 1) : null
+  const needItem = result ? findItem(result, 'need', 2) : null
+  const projectionItem = result ? findItem(result, 'projection', 3) : null
+
   return (
     <>
       <Head>
         <title>观心 · 看见自己真正在说什么</title>
         <meta name="description" content="用 AI 帮你分辨话语中的投射、真实感受与内在需要" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪞</text></svg>" />
       </Head>
 
       <div className="app">
-        {/* ── Sidebar ── */}
-        {isMobile && sidebarOpen && (
-          <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
-        )}
-        <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'} ${isMobile ? 'mobile' : ''}`}>
-          <div className="sidebar-header">
-            {sidebarOpen && <span className="sidebar-title">历史记录</span>}
-            <button className="icon-btn" onClick={() => setSidebarOpen(o => !o)} title={sidebarOpen ? '收起' : '展开'}>
-              {sidebarOpen ? '←' : '→'}
-            </button>
+        {isMobile && sidebarOpen && <button className="overlay" onClick={() => setSidebarOpen(false)} aria-label="关闭导航" />}
+
+        <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+          <div className="brand-panel">
+            <button className="brand-mark" onClick={newAnalysis}>观心</button>
+            <p>看见自己真正正在说什么</p>
           </div>
 
-          {sidebarOpen && (
-            <>
-              <div className="sidebar-list">
-                {history.length === 0 ? (
-                  <p className="sidebar-empty">暂无记录</p>
-                ) : history.map(entry => (
-                  <div
-                    key={entry.id}
-                    className={`sidebar-item ${activeId === entry.id ? 'active' : ''}`}
-                    onClick={() => loadHistory(entry)}
-                  >
-                    <div className="sidebar-item-text">{excerpt(entry.text)}</div>
-                    <div className="sidebar-item-meta">
-                      <span>{formatTime(entry.ts)}</span>
-                      <button className="delete-btn" onClick={e => deleteHistory(entry.id, e)}>×</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="sidebar-footer">
-                <button className="btn-new" onClick={newAnalysis}>＋ 新建</button>
-              </div>
-            </>
-          )}
+          <nav className="nav-list">
+            {NAV_ITEMS.map((item, index) => (
+              <button
+                key={item.label}
+                className={`nav-item ${index === 0 ? 'active' : ''}`}
+                onClick={index === 0 ? newAnalysis : undefined}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="history-block">
+            <div className="history-head">
+              <span>历史记录</span>
+              <button>全部 ›</button>
+            </div>
+            <div className="history-list">
+              {history.length === 0 ? (
+                <p className="empty-history">暂无记录</p>
+              ) : history.slice(0, 6).map(entry => (
+                <button
+                  key={entry.id}
+                  className={`history-item ${activeId === entry.id ? 'active' : ''}`}
+                  onClick={() => loadHistory(entry)}
+                >
+                  <span>{excerpt(entry.text)}</span>
+                  <small>{formatTime(entry.ts)}</small>
+                  <i onClick={e => deleteHistory(entry.id, e)}>×</i>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="sidebar-note">
+            <p>每一次书写<br />都是一次看见自己的机会</p>
+            <div className="leaf-art" />
+          </div>
         </aside>
 
-        {/* ── Main ── */}
         <main className="main">
-          {/* Header */}
-          <header className="header">
-            <div className="header-inner">
-              <div className="brand">
-                {isMobile && (
-                  <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} title="历史记录">
-                    ☰
-                  </button>
-                )}
-                <span className="brand-name">观心</span>
-                <span className="brand-dot" />
-                <span className="brand-sub">看见自己真正在说什么</span>
-              </div>
-              <span className="quota">今日剩余 {remaining !== null ? remaining : '…'} 次</span>
-            </div>
+          <header className="topbar">
+            {isMobile && (
+              <button className="mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="打开导航">☰</button>
+            )}
+            <div className="top-spacer" />
+            <button className="save-btn">存入日记</button>
+            <button className="more-btn" aria-label="更多">•••</button>
           </header>
 
-          <div className="content">
-            <section className="intro">
-              <div className="eyebrow">AI 心理投射分析</div>
-              <h1>把一句卡在心里的话，慢慢看清楚。</h1>
-              <p>
-                观心会从投射、真实感受、情绪和内在需要四个角度，帮你整理一段话背后的内心线索。
-              </p>
+          {!result ? (
+            <section className="home-page">
+              <div className="ambient" />
+              <div className="hero-copy">
+                <h1>把一句卡在心里的话，<br />慢慢看清楚。</h1>
+                <p>写下此刻最真实的一段话。<br />观心会帮你整理那些还没来得及看清的部分。</p>
+              </div>
+
+              <section className="write-card">
+                <textarea
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  placeholder="在这里写下你此刻最想说的话..."
+                  disabled={loading}
+                  maxLength={1000}
+                />
+                {!text && (
+                  <div className="example-box">
+                    <div className="example-title">✐ 比如：</div>
+                    <ul>
+                      {PROMPT_EXAMPLES.map(example => <li key={example}>{example}</li>)}
+                    </ul>
+                  </div>
+                )}
+                <div className="write-count">{text.length}/1000</div>
+              </section>
+
+              <div className="write-meta">
+                <span>▣ 想到什么就写什么，不需要组织语言。</span>
+                <span>建议 20 字以上，效果更好。</span>
+              </div>
+
+              {error && <div className="error-card">{error}</div>}
+
+              <button className="primary-cta" onClick={analyze} disabled={!text.trim() || loading}>
+                {loading ? '正在看见自己...' : '看看自己  →'}
+              </button>
+
+              <section className="starter-section">
+                <div className="divider-title"><span />不知道从哪里开始？试试这些<span /></div>
+                <div className="starter-grid">
+                  {STARTERS.map((starter, index) => (
+                    <button key={starter.text} onClick={() => useExample(PROMPT_EXAMPLES[index % PROMPT_EXAMPLES.length])}>
+                      <b>{starter.icon}</b>
+                      <span>{starter.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <p className="privacy-line">▣ 内容仅对你可见，安全守护你的表达</p>
             </section>
-
-            <div className="card input-card">
-              <div className="input-head">
-                <div>
-                  <div className="card-kicker">开始观心</div>
-                  <h2>写下你此刻最真实的一段话</h2>
-                </div>
-                <span className="privacy-note">仅用于本次分析</span>
+          ) : (
+            <section ref={resultRef} className="report-page">
+              <div className="report-head">
+                <button onClick={newAnalysis}>←</button>
+                <span>观心报告</span>
               </div>
-              <textarea
-                className="textarea"
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder="比如：他总是不在乎我的感受，所有人都觉得我太敏感了，可我只是希望有人能认真听我说完。"
-                rows={7}
-                disabled={loading}
-              />
-              <div className="example-row">
-                {PROMPT_EXAMPLES.map(example => (
-                  <button key={example} className="example-chip" onClick={() => useExample(example)} disabled={loading}>
-                    {example}
-                  </button>
-                ))}
+
+              <div className="quote-card">
+                <div className="quote-mark">“</div>
+                <p>{text}</p>
+                {reportTime && <time>{formatTime(reportTime)}</time>}
               </div>
-              <div className="input-footer">
-                <span className="char-count">{text.length} 字 · 建议 30 字以上</span>
-                <div className="btn-row">
-                  {(text || result) && (
-                    <button className="btn-ghost" onClick={newAnalysis}>清空</button>
-                  )}
-                  <button
-                    className={`btn-primary ${(!text.trim() || loading) ? 'disabled' : ''}`}
-                    onClick={analyze}
-                    disabled={!text.trim() || loading}
-                  >
-                    {loading ? (
-                      <span className="loading-inner">
-                        <span className="spinner" /> 观照中
-                      </span>
-                    ) : '开始观心'}
-                  </button>
-                </div>
+
+              <h1 className="report-title">这段话里，<br />真正想被看见的部分</h1>
+
+              <div className="report-grid">
+                <article className="report-card theme-card">
+                  <CardLabel item={themeItem} fallback="核心主题" />
+                  <h2>{themeItem?.quote || '正在寻找认可'}</h2>
+                  <p>{themeItem?.explain || result.summary}</p>
+                  <div className="mountain warm" />
+                </article>
+
+                <article className="report-card focus-card">
+                  <CardLabel item={realItem} fallback="你真正关注的" />
+                  <blockquote>“{realItem?.quote || excerpt(text, 42)}”</blockquote>
+                  <p>{realItem?.explain || result.summary}</p>
+                  <div className="mountain violet" />
+                </article>
+
+                <article className="report-card need-card">
+                  <CardLabel item={needItem} fallback="你此刻的需要" />
+                  <h2>{needItem?.quote || '确定感'}</h2>
+                  <p>{needItem?.explain || result.summary}</p>
+                  <div className="mountain green" />
+                </article>
+
+                <article className="report-card blind-card">
+                  <CardLabel item={projectionItem} fallback="可能被忽略的角度" />
+                  <p>{projectionItem?.explain || result.summary}</p>
+                  <div className="small-path" />
+                </article>
+
+                <article className="report-card insight-card">
+                  <CardLabel fallback="一句洞见" icon="✧" />
+                  <h2>{result.summary}</h2>
+                  <div className="wide-mountain" />
+                </article>
+
+                <article className="report-card suggestion-card">
+                  <CardLabel fallback="给自己的一句话" icon="♡" />
+                  <p>{result.suggestion}</p>
+                  <div className="window-mark" />
+                </article>
               </div>
-            </div>
 
-            {/* Error */}
-            {error && (
-              <div className="error-card">{error}</div>
-            )}
-
-            {/* Result */}
-            {result && (
-              <div ref={resultRef} className="result">
-                <div className="result-hero">
-                  <div>
-                    <div className="eyebrow">观心报告</div>
-                    <h2>这段话里，真正想被看见的部分</h2>
-                  </div>
-                  {reportTime && <span className="report-meta">{formatTime(reportTime)}</span>}
-                </div>
-
-                <div className="card result-section summary-section">
-                  <div className="section-label">整体感知</div>
-                  <p className="summary-text">{result.summary}</p>
-                </div>
-
-                <div className="card result-section">
-                  <div className="section-label">逐层分析</div>
-                  <div className="items">
-                    {result.items.map((item, i) => {
-                      const cfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.emotion
-                      return (
-                        <div key={i} className="item">
-                          <div className="item-top">
-                            <span className="item-index">{String(i + 1).padStart(2, '0')}</span>
-                            <span className="item-badge" style={{ background: cfg.bg, color: cfg.color }}>
-                              <span className="item-dot" style={{ background: cfg.dot }} />
-                              {cfg.label}
-                            </span>
-                          </div>
-                          <p className="item-quote">「{item.quote}」</p>
-                          <p className="item-explain">{item.explain}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div className="card suggestion-card">
-                  <div className="section-label">给自己的一句话</div>
-                  <p className="suggestion-text">{result.suggestion}</p>
-                </div>
-
-                <div className="result-actions">
-                  <button className="btn-ghost" onClick={newAnalysis}>再写一段</button>
-                </div>
-              </div>
-            )}
-          </div>
+              <button className="again-btn" onClick={newAnalysis}>↻ 再写一段</button>
+              <p className="privacy-line">▣ 内容仅对你可见，安全守护你的表达</p>
+            </section>
+          )}
         </main>
       </div>
 
       <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+        *, *::before, *::after { box-sizing: border-box; }
         body {
-          font-family: -apple-system, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
-          background:
-            radial-gradient(circle at 50% -10%, rgba(220, 211, 190, 0.36), transparent 38%),
-            linear-gradient(180deg, #F7F4EE 0%, #F4F5F7 46%, #F8F8F6 100%);
-          color: #1E1E1C;
-          line-height: 1.6;
+          margin: 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+          color: #332b23;
+          background: #fbf8f2;
         }
-
+        button, textarea { font: inherit; }
+        button { cursor: pointer; border: 0; }
         .app {
-          display: flex;
           min-height: 100vh;
+          display: flex;
+          background:
+            radial-gradient(circle at 72% 8%, rgba(230, 206, 168, 0.28), transparent 28%),
+            linear-gradient(110deg, #f7efe4 0%, #fffdf9 36%, #f8efe4 100%);
         }
-
-        /* ── Sidebar ── */
         .sidebar {
-          position: fixed; top: 0; left: 0; bottom: 0; z-index: 20;
-          background: rgba(255,255,255,0.85);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border-right: 1px solid rgba(0,0,0,0.08);
-          display: flex; flex-direction: column;
-          transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+          width: 276px;
+          flex: 0 0 276px;
+          min-height: 100vh;
+          padding: 34px 22px 24px;
+          border-right: 1px solid rgba(121, 88, 54, 0.13);
+          background: rgba(250, 244, 235, 0.72);
+          backdrop-filter: blur(18px);
+          display: flex;
+          flex-direction: column;
+          gap: 28px;
+          position: sticky;
+          top: 0;
+        }
+        .brand-mark {
+          padding: 0;
+          background: transparent;
+          color: #2c241f;
+          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-size: 32px;
+          font-weight: 800;
+          letter-spacing: 0.03em;
+        }
+        .brand-panel p {
+          margin: 8px 0 0;
+          color: #84776a;
+          font-size: 14px;
+        }
+        .nav-list { display: grid; gap: 10px; }
+        .nav-item {
+          height: 54px;
+          padding: 0 18px;
+          border-radius: 15px;
+          background: transparent;
+          color: #3d352d;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          text-align: left;
+          font-size: 16px;
+        }
+        .nav-item span { width: 20px; color: #65462d; font-size: 18px; }
+        .nav-item.active,
+        .nav-item:hover { background: #efe1cf; }
+        .history-block { min-height: 0; }
+        .history-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+          color: #614b37;
+          font-size: 14px;
+        }
+        .history-head button {
+          background: transparent;
+          color: #9c8d7e;
+          font-size: 12px;
+        }
+        .history-list {
+          display: grid;
+          gap: 9px;
+          max-height: 360px;
+          overflow: auto;
+          padding-right: 2px;
+        }
+        .history-item {
+          position: relative;
+          width: 100%;
+          padding: 13px 28px 12px 13px;
+          border-radius: 13px;
+          background: transparent;
+          color: #4e4237;
+          text-align: left;
+        }
+        .history-item.active,
+        .history-item:hover { background: rgba(236, 222, 202, 0.74); }
+        .history-item span {
+          display: block;
+          font-size: 13px;
+          line-height: 1.55;
+        }
+        .history-item small {
+          display: block;
+          margin-top: 4px;
+          color: #9a8b7e;
+          font-size: 12px;
+        }
+        .history-item i {
+          position: absolute;
+          top: 9px;
+          right: 10px;
+          opacity: 0;
+          font-style: normal;
+          color: #9a7c5e;
+        }
+        .history-item:hover i { opacity: 1; }
+        .empty-history {
+          margin: 0;
+          padding: 18px 8px;
+          color: #a99a8b;
+          font-size: 13px;
+        }
+        .sidebar-note {
+          margin-top: auto;
+          min-height: 170px;
+          padding: 24px 18px;
+          border-radius: 16px;
+          border: 1px solid rgba(158, 125, 83, 0.16);
+          background: linear-gradient(145deg, rgba(255,255,255,0.78), rgba(244,235,222,0.68));
           overflow: hidden;
+          position: relative;
         }
-        .sidebar.open { width: 240px; }
-        .sidebar.closed { width: 48px; }
-
-        .sidebar-header {
-          height: 56px;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 12px;
-          border-bottom: 1px solid rgba(0,0,0,0.06);
-          flex-shrink: 0;
+        .sidebar-note p {
+          position: relative;
+          z-index: 1;
+          margin: 0;
+          color: #6e5f51;
+          line-height: 1.85;
+          font-size: 14px;
         }
-        .sidebar-title {
-          font-size: 13px; font-weight: 600; color: #1D1D1F; letter-spacing: 0.2px;
+        .leaf-art {
+          position: absolute;
+          width: 96px;
+          height: 120px;
+          right: 14px;
+          bottom: 0;
+          opacity: 0.45;
+          background:
+            radial-gradient(ellipse at 55% 26%, transparent 42%, rgba(180,148,101,0.45) 43%, transparent 45%),
+            linear-gradient(75deg, transparent 48%, rgba(150,115,75,0.44) 49%, transparent 51%);
         }
-        .icon-btn {
-          width: 28px; height: 28px; border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 13px; color: #6E6E73; cursor: pointer;
-          background: none; border: none;
-          transition: background 0.15s;
-        }
-        .icon-btn:hover { background: rgba(0,0,0,0.06); }
-
-        .sidebar-list {
-          flex: 1; overflow-y: auto; padding: 8px 6px;
-        }
-        .sidebar-list::-webkit-scrollbar { width: 4px; }
-        .sidebar-list::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
-
-        .sidebar-empty {
-          font-size: 13px; color: #AEAEB2; text-align: center; padding: 24px 0;
-        }
-
-        .sidebar-item {
-          padding: 10px 10px 8px;
-          border-radius: 10px; cursor: pointer;
-          transition: background 0.15s;
-          margin-bottom: 2px;
-        }
-        .sidebar-item:hover { background: rgba(0,0,0,0.04); }
-        .sidebar-item.active { background: rgba(99,102,241,0.08); }
-
-        .sidebar-item-text {
-          font-size: 13px; color: #1D1D1F; line-height: 1.5;
-          margin-bottom: 4px;
-          word-break: break-all;
-        }
-        .sidebar-item.active .sidebar-item-text { color: #4F46E5; }
-
-        .sidebar-item-meta {
-          display: flex; align-items: center; justify-content: space-between;
-        }
-        .sidebar-item-meta span {
-          font-size: 11px; color: #AEAEB2;
-        }
-        .delete-btn {
-          font-size: 15px; color: #AEAEB2; background: none; border: none;
-          cursor: pointer; padding: 0 2px; line-height: 1;
-          opacity: 0; transition: opacity 0.15s;
-        }
-        .sidebar-item:hover .delete-btn { opacity: 1; }
-        .delete-btn:hover { color: #FF3B30; }
-
-        .sidebar-footer {
-          padding: 10px 8px 14px;
-          border-top: 1px solid rgba(0,0,0,0.06);
-          flex-shrink: 0;
-        }
-        .btn-new {
-          width: 100%; padding: 9px; border-radius: 10px;
-          font-size: 13px; font-weight: 500; color: #4F46E5;
-          background: rgba(99,102,241,0.08);
-          border: none; cursor: pointer;
-          transition: background 0.15s;
-        }
-        .btn-new:hover { background: rgba(99,102,241,0.15); }
-
-        /* ── Main ── */
         .main {
           flex: 1;
-          margin-left: 240px;
-          transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1);
-          min-height: 100vh;
-          display: flex; flex-direction: column;
+          min-width: 0;
+          padding: 30px 38px 46px;
+          position: relative;
         }
-        .sidebar.closed ~ .main { margin-left: 48px; }
-
-        /* Header */
-        .header {
-          position: sticky; top: 0; z-index: 10;
-          background: rgba(247,244,238,0.82);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border-bottom: 1px solid rgba(71,63,49,0.1);
-        }
-        .header-inner {
-          max-width: 820px; margin: 0 auto;
-          height: 56px; padding: 0 2rem;
-          display: flex; align-items: center; justify-content: space-between;
-        }
-        .brand { display: flex; align-items: center; gap: 10px; }
-        .brand-name { font-size: 17px; font-weight: 600; letter-spacing: 4px; color: #1D1D1F; }
-        .brand-dot { width: 4px; height: 4px; border-radius: 50%; background: #AEAEB2; }
-        .brand-sub { font-size: 13px; color: #6E6E73; }
-        .hamburger {
-          width: 32px; height: 32px; border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 16px; color: #6E6E73;
-          background: none; border: none; cursor: pointer;
-          margin-right: 4px;
-          transition: background 0.15s;
-        }
-        .hamburger:hover { background: rgba(0,0,0,0.06); }
-
-        .quota {
-          font-size: 12px; color: #5D574F;
-          background: rgba(255,255,255,0.72); padding: 5px 11px; border-radius: 999px;
-          border: 1px solid rgba(71,63,49,0.08);
-        }
-
-        /* Content */
-        .content {
-          max-width: 820px; margin: 0 auto;
-          padding: 3.5rem 2rem 6rem;
-          width: 100%;
-        }
-
-        .intro {
-          padding: 18px 2px 24px;
-        }
-        .eyebrow, .card-kicker {
-          font-size: 12px;
-          font-weight: 650;
-          color: #8B6F3D;
-          letter-spacing: 0.08em;
-        }
-        .intro h1 {
-          max-width: 680px;
-          margin-top: 10px;
-          font-size: 38px;
-          line-height: 1.18;
-          font-weight: 720;
-          color: #1E1E1C;
-        }
-        .intro p {
-          max-width: 640px;
-          margin-top: 14px;
-          font-size: 16px;
-          line-height: 1.9;
-          color: #5F5A52;
-        }
-
-        /* Card */
-        .card {
-          background: #FFFFFF;
-          border-radius: 16px;
-          border: 1px solid rgba(71,63,49,0.1);
-          box-shadow: 0 18px 48px rgba(42,37,28,0.08), 0 2px 6px rgba(42,37,28,0.04);
-          margin-bottom: 16px;
-          overflow: hidden;
-        }
-
-        /* Input card */
-        .input-card { padding: 24px; }
-        .input-head {
+        .topbar {
+          height: 42px;
           display: flex;
-          align-items: flex-start;
+          align-items: center;
+          gap: 18px;
+          margin-bottom: 28px;
+        }
+        .top-spacer { flex: 1; }
+        .mobile-menu, .save-btn, .more-btn {
+          background: rgba(255,255,255,0.68);
+          color: #6a4d33;
+          border: 1px solid rgba(137,101,62,0.18);
+          border-radius: 13px;
+        }
+        .mobile-menu { display: none; width: 40px; height: 40px; }
+        .save-btn {
+          height: 38px;
+          padding: 0 18px;
+          font-size: 14px;
+        }
+        .more-btn {
+          width: 42px;
+          height: 38px;
+          border-color: transparent;
+          background: transparent;
+          letter-spacing: 0.14em;
+          font-weight: 700;
+        }
+        .home-page, .report-page {
+          max-width: 1060px;
+          margin: 0 auto;
+          position: relative;
+        }
+        .ambient {
+          position: absolute;
+          top: 0;
+          right: -26px;
+          width: min(56vw, 720px);
+          height: 390px;
+          background:
+            linear-gradient(90deg, rgba(255,253,249,0.94) 0%, rgba(255,253,249,0.38) 44%, rgba(255,253,249,0) 100%),
+            url('/images/guanxin-window-bg.png') center right / cover no-repeat;
+          border-radius: 26px;
+          opacity: 0.86;
+          pointer-events: none;
+          mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 84%, transparent 100%);
+        }
+        .hero-copy {
+          position: relative;
+          z-index: 1;
+          padding: 70px 0 44px 30px;
+        }
+        .hero-copy h1, .report-title {
+          margin: 0;
+          color: #2f2821;
+          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-size: clamp(42px, 4.2vw, 60px);
+          line-height: 1.45;
+          letter-spacing: 0.02em;
+          font-weight: 800;
+        }
+        .hero-copy p {
+          margin: 26px 0 0;
+          color: #74685c;
+          font-size: 20px;
+          line-height: 1.9;
+        }
+        .write-card {
+          position: relative;
+          z-index: 1;
+          min-height: 380px;
+          padding: 30px 34px 48px;
+          border: 1px solid rgba(131, 98, 61, 0.18);
+          border-radius: 18px;
+          background: rgba(255,255,255,0.72);
+          box-shadow: 0 22px 60px rgba(90,65,38,0.08);
+        }
+        .write-card textarea {
+          width: 100%;
+          min-height: 108px;
+          resize: vertical;
+          border: 0;
+          outline: 0;
+          background: transparent;
+          color: #352e27;
+          font-size: 18px;
+          line-height: 1.8;
+        }
+        .write-card textarea::placeholder { color: #a99d91; }
+        .example-box {
+          width: min(100%, 520px);
+          margin-top: 34px;
+          padding: 22px 26px;
+          border-radius: 13px;
+          border: 1px solid rgba(143,104,63,0.17);
+          background: rgba(250,246,239,0.78);
+          color: #7a6d61;
+        }
+        .example-title {
+          margin-bottom: 10px;
+          color: #795a3b;
+          font-size: 15px;
+        }
+        .example-box ul {
+          margin: 0;
+          padding-left: 18px;
+          display: grid;
+          gap: 10px;
+          font-size: 14px;
+          line-height: 1.75;
+        }
+        .write-count {
+          position: absolute;
+          right: 28px;
+          bottom: 24px;
+          color: #8f8275;
+          font-size: 14px;
+        }
+        .write-meta {
+          display: flex;
           justify-content: space-between;
           gap: 16px;
-          margin-bottom: 16px;
+          margin: 22px 8px 34px;
+          color: #918579;
+          font-size: 14px;
         }
-        .input-head h2 {
-          margin-top: 4px;
-          font-size: 20px;
-          line-height: 1.35;
-          color: #23221F;
-        }
-        .privacy-note {
-          flex-shrink: 0;
-          font-size: 12px;
-          color: #6D675F;
-          background: #F7F2EA;
-          border: 1px solid rgba(139,111,61,0.16);
-          border-radius: 999px;
-          padding: 5px 10px;
-        }
-        .textarea {
-          width: 100%; min-height: 190px; font-size: 16px; line-height: 1.85;
-          border: 1px solid rgba(71,63,49,0.13); border-radius: 14px;
-          padding: 16px 17px; resize: vertical;
-          font-family: inherit; color: #1E1E1C; background: #FBFAF7;
-          transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-          outline: none;
-        }
-        .textarea:focus {
-          border-color: #A47B35;
-          background: #fff;
-          box-shadow: 0 0 0 4px rgba(164,123,53,0.1);
-        }
-        .textarea::placeholder { color: #B7B1A7; }
-        .textarea:disabled { opacity: 0.6; }
-
-        .example-row {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 8px;
-          margin-top: 12px;
-        }
-        .example-chip {
-          min-height: 46px;
-          padding: 9px 10px;
-          border-radius: 12px;
-          background: #F7F6F2;
-          color: #625D55;
-          border: 1px solid rgba(71,63,49,0.08);
-          font-size: 12px;
-          line-height: 1.5;
-          text-align: left;
-          transition: background 0.15s, border-color 0.15s, color 0.15s;
-        }
-        .example-chip:hover:not(:disabled) {
-          background: #F2ECE0;
-          border-color: rgba(139,111,61,0.2);
-          color: #3D3933;
-        }
-        .example-chip:disabled { cursor: not-allowed; opacity: 0.6; }
-
-        .input-footer {
-          display: flex; align-items: center; justify-content: space-between;
-          margin-top: 16px;
-        }
-        .char-count { font-size: 12px; color: #918B82; }
-        .btn-row { display: flex; gap: 8px; align-items: center; }
-
-        /* Buttons */
-        button { font-family: inherit; cursor: pointer; border: none; background: none; }
-
-        .btn-ghost {
-          font-size: 14px; color: #625D55;
-          padding: 8px 16px; border-radius: 10px;
-          border: 1px solid rgba(71,63,49,0.12);
-          transition: background 0.15s;
-        }
-        .btn-ghost:hover { background: rgba(71,63,49,0.05); }
-
-        .btn-primary {
-          font-size: 14px; font-weight: 500; color: #fff;
-          padding: 10px 24px; border-radius: 10px;
-          background: #1F1F1D;
-          box-shadow: 0 10px 22px rgba(31,31,29,0.16);
-          transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-        }
-        .btn-primary:hover:not(.disabled) { background: #3C3428; box-shadow: 0 12px 24px rgba(60,52,40,0.18); }
-        .btn-primary:active:not(.disabled) { transform: scale(0.98); }
-        .btn-primary.disabled { background: #C8C2B8; cursor: not-allowed; box-shadow: none; }
-
-        .loading-inner { display: flex; align-items: center; gap: 7px; }
-        .spinner {
-          width: 13px; height: 13px; border-radius: 50%;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          animation: spin 0.7s linear infinite;
-          display: inline-block;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Error */
         .error-card {
-          background: #FFF2F2; border: 1px solid #FFD0D0;
-          border-radius: 14px; padding: 14px 18px;
-          font-size: 14px; color: #C0392B; margin-bottom: 16px;
+          margin: -14px 0 22px;
+          padding: 14px 18px;
+          border: 1px solid #eec9bd;
+          border-radius: 14px;
+          background: #fff5f0;
+          color: #b25a40;
         }
-
-        /* Result */
-        .result { padding-top: 14px; }
-        .result-hero {
+        .primary-cta {
+          width: 100%;
+          height: 78px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, #6c4d2e, #3a2818);
+          color: #fffaf2;
+          box-shadow: 0 16px 34px rgba(64,43,24,0.28);
+          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-size: 28px;
+          letter-spacing: 0.08em;
+        }
+        .primary-cta:disabled {
+          cursor: not-allowed;
+          opacity: 0.52;
+          box-shadow: none;
+        }
+        .starter-section {
+          margin-top: 54px;
+          text-align: center;
+        }
+        .divider-title {
           display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          color: #a19486;
+          font-size: 15px;
+        }
+        .divider-title span {
+          width: 44px;
+          height: 1px;
+          background: #e5d8c8;
+        }
+        .starter-grid {
+          margin-top: 22px;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 18px;
-          padding: 10px 2px 18px;
         }
-        .result-hero h2 {
-          margin-top: 7px;
-          font-size: 26px;
-          line-height: 1.28;
-          color: #1E1E1C;
+        .starter-grid button {
+          min-height: 128px;
+          padding: 22px 16px;
+          border: 1px solid rgba(151,111,68,0.18);
+          border-radius: 13px;
+          background: rgba(255,255,255,0.58);
+          color: #594536;
         }
-        .report-meta {
-          flex-shrink: 0;
-          color: #8B857B;
-          font-size: 12px;
-          padding-bottom: 4px;
+        .starter-grid b {
+          display: block;
+          margin-bottom: 18px;
+          color: #aa8d67;
+          font-size: 28px;
+          font-weight: 400;
         }
-        .result-section { padding: 22px 24px; }
-        .summary-section {
-          background: linear-gradient(180deg, #FFFFFF 0%, #FBF8F1 100%);
+        .starter-grid span {
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 16px;
         }
-        .section-label {
-          font-size: 11px; font-weight: 650; letter-spacing: 0.12em;
-          color: #9A7C43; text-transform: uppercase; margin-bottom: 12px;
+        .privacy-line {
+          margin: 36px 0 0;
+          text-align: center;
+          color: #aaa096;
+          font-size: 14px;
         }
-        .summary-text {
-          font-size: 16px; color: #2E2C28; line-height: 1.95;
-        }
-
-        .items { display: flex; flex-direction: column; gap: 12px; }
-        .item {
-          padding: 16px; border-radius: 14px;
-          background: #FAFAF8; border: 1px solid rgba(71,63,49,0.08);
-        }
-        .item-top { margin-bottom: 9px; display: flex; align-items: center; gap: 8px; }
-        .item-index {
-          font-size: 11px;
+        .report-head {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin: 4px 0 28px;
+          color: #684728;
+          font-size: 18px;
           font-weight: 650;
-          color: #AAA399;
-          min-width: 22px;
         }
-        .item-badge {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 11px; font-weight: 600; padding: 3px 10px 3px 7px;
-          border-radius: 20px; letter-spacing: 0.3px;
+        .report-head button {
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: transparent;
+          color: #684728;
+          font-size: 22px;
         }
-        .item-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-        .item-quote {
-          font-size: 15px; color: #30302D; font-style: italic;
-          line-height: 1.75; margin-bottom: 7px;
+        .quote-card {
+          position: relative;
+          display: flex;
+          gap: 22px;
+          align-items: flex-start;
+          padding: 28px 34px;
+          border: 1px solid rgba(132,96,59,0.16);
+          border-radius: 16px;
+          background: rgba(255,255,255,0.72);
+          box-shadow: 0 18px 48px rgba(68,47,28,0.06);
         }
-        .item-explain {
-          font-size: 14px; color: #666158; line-height: 1.85;
+        .quote-mark {
+          width: 54px;
+          height: 54px;
+          display: grid;
+          place-items: center;
+          border: 1px solid #eadfce;
+          border-radius: 50%;
+          color: #a57948;
+          font-family: Georgia, serif;
+          font-size: 48px;
+          line-height: 1;
+          flex: 0 0 auto;
         }
-
+        .quote-card p {
+          margin: 0;
+          max-width: 720px;
+          color: #2e2924;
+          font-size: 20px;
+          line-height: 1.65;
+          font-weight: 650;
+        }
+        .quote-card time {
+          margin-left: auto;
+          color: #9a8c7d;
+          font-size: 14px;
+          white-space: nowrap;
+        }
+        .report-title {
+          margin: 34px 0 26px 10px;
+          font-size: clamp(36px, 3.6vw, 50px);
+          line-height: 1.25;
+        }
+        .report-grid {
+          display: grid;
+          grid-template-columns: 1.05fr 1fr 1fr;
+          gap: 16px;
+        }
+        .report-card {
+          position: relative;
+          min-height: 220px;
+          padding: 28px;
+          border: 1px solid rgba(132,96,59,0.15);
+          border-radius: 16px;
+          background: rgba(255,255,255,0.68);
+          overflow: hidden;
+          box-shadow: 0 18px 42px rgba(68,47,28,0.05);
+        }
+        .report-card h2 {
+          position: relative;
+          z-index: 1;
+          margin: 24px 0 16px;
+          color: #2c251f;
+          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-size: 42px;
+          line-height: 1.2;
+        }
+        .report-card p,
+        .report-card blockquote {
+          position: relative;
+          z-index: 1;
+          margin: 0;
+          color: #4d443b;
+          font-size: 16px;
+          line-height: 1.9;
+        }
+        .focus-card blockquote {
+          color: #4d3eb0;
+          font-family: 'Songti SC', 'STSong', 'SimSun', serif;
+          font-size: 24px;
+          font-weight: 800;
+          line-height: 1.55;
+          margin: 24px 0 18px;
+        }
+        .card-label {
+          position: relative;
+          z-index: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          color: #8d5a23;
+          font-size: 15px;
+          font-weight: 700;
+        }
+        .card-label i {
+          width: 40px;
+          height: 40px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #fff2de;
+          color: #f09a2a;
+          font-style: normal;
+          font-size: 20px;
+        }
+        .tone-violet .card-label { color: #4d3eb0; }
+        .tone-violet .card-label i { background: #efedff; color: #7565dd; }
+        .tone-green .card-label { color: #2f7a4d; }
+        .tone-green .card-label i { background: #e6f3e9; color: #3f9a65; }
+        .tone-amber .card-label { color: #bf6b25; }
+        .insight-card {
+          grid-column: span 2;
+          min-height: 220px;
+          background: linear-gradient(135deg, rgba(255,248,238,0.88), rgba(255,255,255,0.72));
+        }
+        .insight-card h2 {
+          max-width: 650px;
+          font-size: 34px;
+          line-height: 1.55;
+        }
         .suggestion-card {
-          padding: 24px;
-          background: #24231F;
-          border-color: #24231F;
+          grid-column: 1 / -1;
+          min-height: 180px;
+          padding-right: 310px;
         }
-        .suggestion-card .section-label { color: #D0B987; }
-        .suggestion-text {
-          font-size: 18px; color: #FFF8E8; line-height: 1.9; font-style: italic;
+        .suggestion-card p {
+          max-width: 640px;
+          padding-left: 30px;
+        }
+        .mountain,
+        .wide-mountain,
+        .small-path,
+        .window-mark {
+          position: absolute;
+          pointer-events: none;
+          opacity: 0.42;
+        }
+        .mountain {
+          width: 180px;
+          height: 90px;
+          right: 0;
+          bottom: 0;
+          background: radial-gradient(circle at 32% 0%, rgba(246,190,103,0.5), transparent 30%),
+            linear-gradient(140deg, transparent 45%, rgba(222,193,150,0.5) 46%, transparent 70%);
+          clip-path: polygon(0 100%, 35% 28%, 52% 68%, 70% 36%, 100% 100%);
+        }
+        .mountain.violet { background: linear-gradient(140deg, transparent 45%, rgba(170,158,230,0.45) 46%, transparent 70%); }
+        .mountain.green { background: linear-gradient(140deg, transparent 45%, rgba(158,205,172,0.45) 46%, transparent 70%); }
+        .wide-mountain {
+          right: 20px;
+          bottom: 0;
+          width: 310px;
+          height: 120px;
+          background: url('/images/guanxin-window-bg.png') center / cover no-repeat;
+          opacity: 0.22;
+          border-radius: 30px;
+        }
+        .small-path {
+          right: 20px;
+          bottom: 22px;
+          width: 100px;
+          height: 80px;
+          background: radial-gradient(circle at 50% 12%, #d7b082 0 7px, transparent 8px),
+            linear-gradient(135deg, transparent 48%, rgba(180,139,91,0.4) 49%, transparent 51%);
+        }
+        .window-mark {
+          right: 0;
+          top: 0;
+          width: 360px;
+          height: 180px;
+          background: url('/images/guanxin-window-bg.png') center / cover no-repeat;
+          opacity: 0.24;
+        }
+        .again-btn {
+          display: block;
+          margin: 30px auto 0;
+          height: 48px;
+          padding: 0 54px;
+          border: 1px solid rgba(139,95,52,0.22);
+          border-radius: 999px;
+          background: #fbf4ea;
+          color: #7b5432;
+          font-size: 16px;
+        }
+        .overlay { display: none; }
+
+        @media (max-width: 1080px) {
+          .sidebar {
+            width: 244px;
+            flex-basis: 244px;
+          }
+          .main { padding: 24px; }
+          .report-grid { grid-template-columns: 1fr 1fr; }
+          .need-card, .suggestion-card { grid-column: 1 / -1; }
+          .suggestion-card { padding-right: 240px; }
         }
 
-        .result-actions {
-          display: flex; justify-content: center; padding-top: 8px; margin-bottom: 8px;
-        }
-
-        /* Mobile */
-        .sidebar-overlay {
-          display: none;
-        }
-        @media (max-width: 640px) {
-          .sidebar.mobile {
+        @media (max-width: 780px) {
+          .app { display: block; }
+          .sidebar {
             position: fixed;
             z-index: 30;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+            inset: 0 auto 0 0;
+            width: min(82vw, 300px);
+            transform: translateX(-105%);
+            transition: transform 0.22s ease;
+            box-shadow: 18px 0 46px rgba(65,45,25,0.16);
           }
-          .sidebar.mobile.open { width: 260px; }
-          .sidebar.mobile.closed { width: 0; border-right: none; }
-          .sidebar-overlay {
+          .sidebar.open { transform: translateX(0); }
+          .overlay {
             display: block;
-            position: fixed; inset: 0; z-index: 25;
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(2px);
+            position: fixed;
+            z-index: 25;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(45,34,25,0.22);
           }
-          .main { margin-left: 0 !important; }
-          .brand-sub { display: none; }
-          .content { padding: 1.5rem 1rem 5rem; }
-          .header-inner { padding: 0 1rem; }
-          .intro { padding-top: 12px; }
-          .intro h1 { font-size: 29px; }
-          .intro p { font-size: 14px; }
-          .input-card { padding: 18px; }
-          .input-head { flex-direction: column; gap: 10px; }
-          .privacy-note { align-self: flex-start; }
-          .example-row { grid-template-columns: 1fr; }
-          .input-footer { align-items: stretch; flex-direction: column; gap: 12px; }
-          .btn-row { justify-content: flex-end; }
-          .result-hero { align-items: flex-start; flex-direction: column; gap: 8px; }
-          .result-hero h2 { font-size: 22px; }
+          .main {
+            padding: 18px 16px 36px;
+          }
+          .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 12;
+            margin: -18px -16px 10px;
+            padding: 12px 16px;
+            height: 64px;
+            background: rgba(251,248,242,0.82);
+            backdrop-filter: blur(16px);
+          }
+          .mobile-menu { display: block; }
+          .save-btn { height: 36px; padding: 0 14px; }
+          .more-btn { width: 34px; }
+          .ambient {
+            width: 100%;
+            height: 230px;
+            right: 0;
+            opacity: 0.48;
+            mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
+          }
+          .hero-copy {
+            padding: 46px 2px 28px;
+          }
+          .hero-copy h1, .report-title {
+            font-size: 36px;
+            line-height: 1.35;
+          }
+          .hero-copy p {
+            margin-top: 18px;
+            font-size: 16px;
+          }
+          .write-card {
+            min-height: 330px;
+            padding: 22px 18px 44px;
+            border-radius: 16px;
+          }
+          .write-card textarea {
+            min-height: 132px;
+            font-size: 16px;
+          }
+          .example-box {
+            margin-top: 20px;
+            padding: 16px 18px;
+          }
+          .write-meta {
+            display: grid;
+            margin: 16px 2px 24px;
+            font-size: 13px;
+          }
+          .primary-cta {
+            height: 60px;
+            border-radius: 15px;
+            font-size: 22px;
+          }
+          .starter-section { margin-top: 38px; }
+          .starter-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+          .starter-grid button {
+            min-height: 104px;
+            padding: 18px 12px;
+          }
+          .quote-card {
+            display: block;
+            padding: 22px 20px;
+          }
+          .quote-mark {
+            width: 42px;
+            height: 42px;
+            margin-bottom: 12px;
+            font-size: 38px;
+          }
+          .quote-card p { font-size: 17px; }
+          .quote-card time {
+            display: block;
+            margin-top: 12px;
+          }
+          .report-title { margin-left: 0; }
+          .report-grid { grid-template-columns: 1fr; }
+          .insight-card, .suggestion-card { grid-column: auto; }
+          .report-card {
+            min-height: auto;
+            padding: 22px;
+          }
+          .report-card h2 {
+            font-size: 34px;
+          }
+          .focus-card blockquote {
+            font-size: 21px;
+          }
+          .insight-card h2 {
+            font-size: 26px;
+          }
+          .suggestion-card {
+            padding-right: 22px;
+            padding-bottom: 110px;
+          }
+          .suggestion-card p {
+            padding-left: 0;
+          }
+          .window-mark {
+            width: 230px;
+            height: 110px;
+            top: auto;
+            bottom: 0;
+          }
         }
       `}</style>
     </>
+  )
+}
+
+function CardLabel({ item, fallback, icon }) {
+  const type = item?.type
+  const config = TYPE_CONFIG[type] || {}
+  const tone = config.tone || 'amber'
+  return (
+    <div className={`tone-${tone}`}>
+      <div className="card-label">
+        <i>{icon || config.icon || '✧'}</i>
+        <span>{config.label || fallback}</span>
+      </div>
+    </div>
   )
 }
