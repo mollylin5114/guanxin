@@ -1285,42 +1285,92 @@ export default function Home() {
           .quote-card {
             display: block;
             min-height: 0;
-            padding: 20px 18px;
+            padding: 18px 16px;
           }
           .quote-mark {
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             margin-bottom: 12px;
-            font-size: 38px;
+            font-size: 32px;
           }
-          .quote-card p { font-size: 16px; }
+          .quote-card p {
+            max-width: none;
+            font-size: 14px;
+            line-height: 1.75;
+            font-weight: 500;
+          }
           .quote-card time {
             display: block;
             margin-top: 12px;
           }
-          .report-title { margin-left: 0; }
-          .report-grid { grid-template-columns: 1fr; }
+          .report-title {
+            margin: 22px 0 18px;
+            font-size: 28px;
+            line-height: 1.34;
+            font-weight: 600;
+          }
+          .report-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
           .insight-card, .suggestion-card { grid-column: auto; }
           .report-card {
             height: auto;
-            min-height: 190px;
-            padding: 20px;
+            min-height: 0;
+            padding: 17px 16px 18px;
+            border-radius: 15px;
           }
           .report-card h2 {
-            font-size: 24px;
+            margin-top: 12px;
+            font-size: 21px;
+            line-height: 1.38;
+          }
+          .report-card p,
+          .report-card blockquote {
+            font-size: 14px;
+            line-height: 1.78;
+          }
+          .theme-card p,
+          .focus-card p,
+          .need-card p,
+          .blind-card p {
+            -webkit-line-clamp: unset;
+            overflow: visible;
+          }
+          .card-label {
+            gap: 9px;
+            font-size: 13px;
+          }
+          .card-label i {
+            width: 34px;
+            height: 34px;
+            font-size: 16px;
           }
           .focus-card blockquote {
-            font-size: 17px;
+            font-size: 16px;
+            line-height: 1.68;
+          }
+          .insight-card {
+            padding-bottom: 104px;
           }
           .insight-card h2 {
-            font-size: 20px;
+            max-width: none;
+            font-size: 18px;
+            line-height: 1.78;
+            display: block;
+            overflow: visible;
           }
           .suggestion-card {
             padding-right: 22px;
-            padding-bottom: 110px;
+            padding-bottom: 112px;
           }
           .suggestion-card p {
+            max-width: none;
             padding-left: 0;
+            font-size: 14px;
+            line-height: 1.82;
+            display: block;
+            overflow: visible;
           }
           .perspective-section {
             margin: 26px -16px 0 0;
