@@ -1285,23 +1285,23 @@ export default function Home() {
           .quote-card {
             display: block;
             min-height: 0;
-            padding: 18px 16px;
+            padding: 15px 16px;
+            border-radius: 14px;
+            box-shadow: none;
           }
           .quote-mark {
-            width: 38px;
-            height: 38px;
-            margin-bottom: 12px;
-            font-size: 32px;
+            display: none;
           }
           .quote-card p {
             max-width: none;
             font-size: 14px;
-            line-height: 1.75;
+            line-height: 1.7;
             font-weight: 500;
           }
           .quote-card time {
             display: block;
-            margin-top: 12px;
+            margin-top: 10px;
+            font-size: 12px;
           }
           .report-title {
             margin: 22px 0 18px;
@@ -1362,7 +1362,7 @@ export default function Home() {
           }
           .suggestion-card {
             padding-right: 22px;
-            padding-bottom: 112px;
+            padding-bottom: 18px;
           }
           .suggestion-card p {
             max-width: none;
@@ -1395,10 +1395,7 @@ export default function Home() {
             scroll-snap-align: start;
           }
           .window-mark {
-            width: 230px;
-            height: 110px;
-            top: auto;
-            bottom: 0;
+            display: none;
           }
         }
       `}</style>
